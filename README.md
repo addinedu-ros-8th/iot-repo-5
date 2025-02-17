@@ -83,14 +83,19 @@ mp4 - video
 
 ## Design
 
-## Supplies 
+### Scenario
 
-## System Requirement 
+### Structure 
 
+### Architecture  
+
+### ERD 
+ 
 ### Fuction 
 #### Server
 #### Client   
 #### Controller    
 
+## Test Case
 ## Project Schedule
 Project Period: 2025.02.19~2025.02.26
