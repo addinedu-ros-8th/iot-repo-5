@@ -90,7 +90,7 @@ mp4 - video
 ### Architecture  
 
 ### ERD 
- 
+![Image](https://github.com/user-attachments/assets/e1687e57-f188-4126-9fd4-11200557cc1e)
 ### Fuction 
 #### Server
 #### Client   
