@@ -24,7 +24,7 @@ IOT 프로젝트 5조 저장소. 팀 통신보안
 
 
 
-https://user-images.githubusercontent.com/44033302/177024517-57cbd3e1-1326-4765-aeb8-fbca25eab88e.mp4
+mp4 - video
 
 <br>
 
