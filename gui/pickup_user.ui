@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>553</width>
-    <height>425</height>
+    <width>585</width>
+    <height>445</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -88,148 +88,188 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_2">
+  <widget class="QTabWidget" name="tabWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>140</y>
-     <width>531</width>
-     <height>271</height>
+     <width>561</width>
+     <height>291</height>
     </rect>
    </property>
-   <property name="title">
-    <string>Order</string>
+   <property name="currentIndex">
+    <number>1</number>
    </property>
-   <widget class="QTableWidget" name="tbOrder">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>311</width>
-      <height>231</height>
-     </rect>
-    </property>
-    <column>
-     <property name="text">
-      <string>물품ID</string>
+   <widget class="QWidget" name="tab">
+    <attribute name="title">
+     <string>물품주문</string>
+    </attribute>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>20</y>
+       <width>67</width>
+       <height>17</height>
+      </rect>
      </property>
-    </column>
-    <column>
      <property name="text">
-      <string>물품유형</string>
+      <string>물품명 : </string>
      </property>
-    </column>
-    <column>
+    </widget>
+    <widget class="QPushButton" name="btnOrder">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>120</y>
+       <width>181</width>
+       <height>51</height>
+      </rect>
+     </property>
      <property name="text">
-      <string>물품명</string>
+      <string>주문하기</string>
      </property>
-    </column>
-    <column>
+    </widget>
+    <widget class="QLabel" name="lblQuantity">
+     <property name="geometry">
+      <rect>
+       <x>410</x>
+       <y>50</y>
+       <width>67</width>
+       <height>17</height>
+      </rect>
+     </property>
      <property name="text">
-      <string>재고량</string>
+      <string>0</string>
      </property>
-    </column>
+    </widget>
+    <widget class="QLineEdit" name="editOrderQuantity">
+     <property name="geometry">
+      <rect>
+       <x>410</x>
+       <y>75</y>
+       <width>113</width>
+       <height>25</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnRefresh">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>190</y>
+       <width>181</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>새로고침</string>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="tbOrder">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>311</width>
+       <height>231</height>
+      </rect>
+     </property>
+     <column>
+      <property name="text">
+       <string>물품ID</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>물품유형</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>물품명</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>재고량</string>
+      </property>
+     </column>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>50</y>
+       <width>51</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>재고량 :</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>80</y>
+       <width>67</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>주문수량:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="lblProductName">
+     <property name="geometry">
+      <rect>
+       <x>410</x>
+       <y>20</y>
+       <width>131</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
    </widget>
-   <widget class="QLabel" name="lblProductName">
-    <property name="geometry">
-     <rect>
-      <x>410</x>
-      <y>40</y>
-      <width>131</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>70</y>
-      <width>51</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>재고량 :</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_2">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>100</y>
-      <width>67</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>주문수량:</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lblQuantity">
-    <property name="geometry">
-     <rect>
-      <x>410</x>
-      <y>70</y>
-      <width>67</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>0</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="editOrderQuantity">
-    <property name="geometry">
-     <rect>
-      <x>410</x>
-      <y>95</y>
-      <width>113</width>
-      <height>25</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnOrder">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>140</y>
-      <width>181</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>주문하기</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_3">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>40</y>
-      <width>67</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>물품명 : </string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnRefresh">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>210</y>
-      <width>181</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>새로고침</string>
-    </property>
+   <widget class="QWidget" name="tab_2">
+    <attribute name="title">
+     <string>장바구니</string>
+    </attribute>
+    <widget class="QTableWidget" name="tableWidget">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>541</width>
+       <height>131</height>
+      </rect>
+     </property>
+     <column>
+      <property name="text">
+       <string>장바구니ID</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>물품명</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>수량</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>가격</string>
+      </property>
+     </column>
+    </widget>
    </widget>
   </widget>
  </widget>
