@@ -1,7 +1,7 @@
 import sys
 import os
 import database
-import threading
+import struct
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
@@ -10,11 +10,11 @@ import json
 from PyQt5.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
 
 class Server(QTcpServer):
-    client_list = {}
-    port = 8888
-
     def __init__(self):
         super(Server, self).__init__()
+
+        self.client_list = {}
+        self.port = 8888
 
     def incomingConnection(self, handle):
         client_socket = QTcpSocket(self)
@@ -29,24 +29,22 @@ class Server(QTcpServer):
 
     def receive_data(self, client_socket):
         while client_socket.bytesAvailable():
-            data = client_socket.readAll().data().decode("utf-8")
+            data = client_socket.readAll()
+            data = bytes(data)
             print(f"Received data : {data}")
-            if data[0] == "$":
-                command, body = data[1:].split("+")
-                if command == "AT":
-                    self.client_list[body] = client_socket
-                    #self.main.writeLog("연결", body + "번 기기 연결 성공")
-                    print(body + "번 기기 연결 성공")
-                    self.sendData(client_socket, "$ATOK+0")
-                elif command == "":
-                    pass
+            
+            command = data[:2].decode()
+            if command == 'AA':
+                self.client_list[1] = client_socket
+                self.sendData(client_socket, struct.pack("<2sc", command.encode(), b'\n'))
 
     def disconnected(self, client_socket):
         print(f"client disconnected : {client_socket}")
         client_socket.deleteLater()
     
     def sendData(self, client_socket, message):
-        client_socket.write(message.encode("utf-8"))
+        print(message)
+        client_socket.write(message)
 
 def processCommand():
     while True:
@@ -55,6 +53,9 @@ def processCommand():
         if command.strip().lower() == "exit":
             print("Server Close.")
             break
+        elif command.strip() == "at":
+            data = struct.pack("<2sc", "AT".encode(), b'\n')
+            server.sendData(server.client_list[1], "CCZ\n".encode("utf-8"))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
