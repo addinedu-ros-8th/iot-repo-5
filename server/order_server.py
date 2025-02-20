@@ -98,6 +98,16 @@ def loginQuery(id, pw):
         return {"state":1, "id":result[1], "name":result[2]}
     else:
         return {"state":0}
+    
+def updateLog(self):
+    sql = "select * from log"
+    result = self.conn.fetch_all(sql)
+
+def writeLog(self, type, message):
+    sql = "insert into log(event_type, message) values(%s, %s)"
+    self.conn.execute_query(sql, (type, message))
+
+    self.updateLog()
 
 conn = None
 
