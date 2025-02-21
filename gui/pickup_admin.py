@@ -5,52 +5,10 @@ from PyQt5.QtGui import *
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 import json
-from PyQt5.QtNetwork import QTcpServer, QHostAddress, QAbstractSocket, QTcpSocket
+from PyQt5.QtNetwork import QTcpSocket, QHostAddress
 
 path = os.path.join(os.path.dirname(__file__), 'pickup_admin.ui') 
 from_class = uic.loadUiType(path)[0]
-
-class Server(QTcpServer):    
-    def __init__(self, main):
-        super(Server, self).__init__()
-
-        self.client_list = {}
-        self.main = main
-
-    def incomingConnection(self, handle):
-        client_socket = QTcpSocket(self)
-        client_socket.setSocketDescriptor(handle)
-        client_socket.readyRead.connect(lambda: self.receive_data(client_socket))
-        client_socket.disconnected.connect(lambda: self.disconnected(client_socket))
-        client_socket.errorOccurred.connect(lambda err: self.socketError(client_socket, err))
-            
-        print(f"client connected : {client_socket}")
-
-    def socketError(self, client_socket, err):
-        print("error", err)
-        if client_socket.state() == QTcpSocket.UnconnectedState:
-            self.clientDisconnected(client_socket)
-
-    def receive_data(self, client_socket):
-        while client_socket.bytesAvailable():
-            data = client_socket.readAll().data().decode("utf-8")
-            print(f"Received data : {data}")
-            if data[0] == "$":
-                command, body = data[1:].split("+")
-                if command == "AT":
-                    self.client_list[body] = client_socket
-                    #self.main.writeLog("연결", body + "번 기기 연결 성공")
-                    print(body + "번 기기 연결 성공")
-                    self.sendData(client_socket, "$ATOK+0")
-                elif command == "":
-                    pass
-
-    def disconnected(self, client_socket):
-        print(f"client disconnected : {client_socket}")
-        client_socket.deleteLater()
-    
-    def sendData(self, client_socket, message):
-        client_socket.write(message.encode("utf-8"))
 
 class Client(QTcpSocket):
     receive_data = pyqtSignal(dict)
@@ -60,7 +18,7 @@ class Client(QTcpSocket):
 
         self.connected.connect(self.on_connected)
         self.readyRead.connect(self.receiveData)
-        self.send_data.connect(self.sendData)
+        #self.send_data.connect(self.sendData)
 
     def receiveData(self):
         while self.bytesAvailable() > 0:
@@ -116,17 +74,9 @@ class WindowClass(QMainWindow, from_class):
         self.tabWidget.currentChanged.connect(self.tabChanged)
         self.tabWidget.setCurrentIndex(0)
 
-        self.btnTest.clicked.connect(self.sendTest)
-
-        self.server = Server(self)
-        if self.server.listen(QHostAddress.Any, 8888):
-            print("Server listen on port 8888")
-        else:
-            print("Failed listen on port 8888")
-
-    def sendTest(self):
-        print(self.server.client_list)
-        self.server.sendData(self.server.client_list["2"], "$SV+0+1/5")
+        self.socket = Client()
+        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
+        self.socket.receive_data.connect(self.receiveData)
 
     def testLog(self):
         sql = "update user set status = 0 where login_id = 'admin'"
@@ -189,7 +139,7 @@ class WindowClass(QMainWindow, from_class):
             self.editOrderQuantity.setFocus()
         else:
             product_id = self.tbOrder.item(self.tbOrder.currentRow(), 0).text()
-            if self.orderQuery(user_id, product_id, quantity):
+            if self.orderQuery(self.user_id, product_id, quantity):
                 QMessageBox.information(self, "Order Success...", self.lblProductName.text() + " " + str(quantity) + "개를 주문하였습니다.")
                 self.updateProductList()
                 #self.lblQuantity.setText(str(updateQuantity))
