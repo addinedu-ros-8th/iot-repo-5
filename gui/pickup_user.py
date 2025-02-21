@@ -132,8 +132,7 @@ class WindowClass(QMainWindow, from_class):
                     self.tbShoppingCart.setItem(row, 1, QTableWidgetItem(items[1]))
                     spinBox = QSpinBox()
                     spinBox.setValue(int(items[2]))
-                    currentQuantity = spinBox.value()
-                    spinBox.valueChanged.connect(lambda value: self.modifySpinQuantity(value))
+                    spinBox.valueChanged.connect(lambda value: self.changedSpin(value))
                     self.tbShoppingCart.setCellWidget(row, 2, spinBox)
 
                     price = int(items[3])
@@ -149,7 +148,7 @@ class WindowClass(QMainWindow, from_class):
                 data = {"command":"SC", "status":3, "user_id":self.user_id}
                 self.socket.sendData(data)
 
-    def modifySpinQuantity(self, row):
+    def changedSpin(self, value):
         row = self.tbShoppingCart.currentRow()
 
         quantity = int(self.tbShoppingCart.cellWidget(row, 2).value())
