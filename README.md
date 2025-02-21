@@ -4,7 +4,7 @@ IOT 프로젝트 5조 저장소. 팀 통신보안
 <br />
 <p align="center">
   <a href="https://github.com/addinedu-ros-8th/iot-repo-5">
-    <img src="https://github.com/addinedu-ros-8th/eda-repo-3/blob/main/flowermen.jpg" alt="Logo" width="500px">
+    <img src="https://github.com/addinedu-ros-8th/iot-repo-5/blob/main/frontImg.webp" alt="Logo" width="500px">
   </a>
 
   <h3 align="center">무인매장 자동화 시스템(Unmanned Store Automation System)</h3>
@@ -90,7 +90,7 @@ mp4 - video
 ### Architecture  
 
 ### ERD 
-![Image](https://github.com/user-attachments/assets/e1687e57-f188-4126-9fd4-11200557cc1e)
+
 ### Fuction 
 #### Server
 #### Client   
