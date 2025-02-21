@@ -4,7 +4,7 @@ import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress
 
 path = os.path.join(os.path.dirname(__file__), 'pickup_user.ui') 
@@ -30,6 +30,7 @@ class Client(QTcpSocket):
         if self.state() == QTcpSocket.ConnectedState:
             data = json.dumps(message, default=str)
             self.write(data.encode('utf-8'))
+            self.flush()
 
     def on_connected(self):
         self.receive_data.emit({"command":"CON"})
@@ -51,7 +52,7 @@ class WindowClass(QMainWindow, from_class):
         self.setWindowTitle("User")
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
         self.socket.receive_data.connect(self.receiveData)
 
         self.groupBox.setEnabled(False)
@@ -73,27 +74,38 @@ class WindowClass(QMainWindow, from_class):
         self.btnOrder.clicked.connect(self.addShoppingCart)
         self.btnDelete.clicked.connect(self.delShoppingCart)
         self.btnModify.clicked.connect(self.modifyShoppingCart)
+        self.btnCheckout.clicked.connect(self.checkout)
 
         self.setHeaderSisze()
+        sys.excepthook = self.handle_exception
+
+    def handle_exception(self, exctype, value, traceback):
+        self.closeEvent(None)
+        sys.__excepthook__(exctype, value, traceback)
 
     def receiveData(self, data):
         command = data["command"]
+        print(data)
 
         if command == "CON":
             self.groupBox.setEnabled(True)
+            self.editID.setFocus()
         elif command == "FAIL":
             QMessageBox.warning(self, "Error...", "서버 연결 실패")
+            self.groupBox.setEnabled(False)
+        elif command == "ER":
+            QMessageBox.warning(self, "Error...", "에러")
         if command == "LI":
             status = data["status"]
             
-            if status == 2:
+            if status == 0x02:
                 QMessageBox.warning(self, "Login Failed...", "이미 로그인중인 계정입니다.")
-            elif status == 0:
+            elif status == 0x00:
                 QMessageBox.warning(self, "Login Failed...", "아이디, 패스워드를 다시 입력해주세요.")
                 self.editID.clear()
                 self.editPW.clear()
                 self.editID.setFocus()
-            elif status == 1:
+            elif status == 0x01:
                 QMessageBox.warning(self, "Login Success", "로그인 성공")
                 self.groupBox.setEnabled(False)
                 self.tabWidget.setEnabled(True)
@@ -104,6 +116,9 @@ class WindowClass(QMainWindow, from_class):
 
                 self.socket.sendData({"command":"IN"})
         elif command == "IN":
+            self.tbOrder.clearContents()
+            self.tbOrder.setRowCount(0)
+            
             for items in data["data"]:
                 row = self.tbOrder.rowCount()
                 self.tbOrder.insertRow(row)
@@ -116,11 +131,11 @@ class WindowClass(QMainWindow, from_class):
         elif command == "SC":
             status = data["status"]
 
-            if status == 1:
+            if status == 0x01:
                 QMessageBox.information(self, "Success...", "장바구니 담기 성공")
-            elif status == 2:
+            elif status == 0x02:
                 QMessageBox.warning(self, "Failed...", "장바구니 담기 실패")
-            elif status == 4:
+            elif status == 0x03:
                 self.tbShoppingCart.clearContents()
                 self.tbShoppingCart.setRowCount(0)
                 totalPrice = 0
@@ -130,33 +145,67 @@ class WindowClass(QMainWindow, from_class):
 
                     self.tbShoppingCart.setItem(row, 0, QTableWidgetItem(str(items[0])))
                     self.tbShoppingCart.setItem(row, 1, QTableWidgetItem(items[1]))
+                    quantity = int(items[2])
                     spinBox = QSpinBox()
-                    spinBox.setValue(int(items[2]))
-                    currentQuantity = spinBox.value()
-                    spinBox.valueChanged.connect(lambda value: self.modifySpinQuantity(value))
+                    spinBox.setMaximum(int(items[4]))
+                    spinBox.setMinimum(1)
+                    spinBox.setValue(quantity)
+                    spinBox.valueChanged.connect(lambda value, row=row: self.changedSpin(value, row))
                     self.tbShoppingCart.setCellWidget(row, 2, spinBox)
 
-                    price = int(items[3])
-                    self.tbShoppingCart.setItem(row, 3, QTableWidgetItem(format(price, ",d")))
+                    unitPrice = int(items[3])
+                    price = unitPrice * quantity
+                    price_item = QTableWidgetItem(format(price, ",d"))
+                    price_item.setData(Qt.UserRole, unitPrice)
+                    self.tbShoppingCart.setItem(row, 3, price_item)
                     totalPrice += price
                 
                 self.lblTotalPrice.setText(format(totalPrice, ",d"))
-            elif status == 5:
+            elif status == 0x05:
                 QMessageBox.information(self, "Success...", "수량 수정 완료")
-            elif status == 6:
+            elif status == 0x06:
                 QMessageBox.information(self, "Success...", "상품 삭제 완료")
 
                 data = {"command":"SC", "status":3, "user_id":self.user_id}
                 self.socket.sendData(data)
+        elif command == "CO":
+            status = data["status"]
 
-    def modifySpinQuantity(self, row):
-        row = self.tbShoppingCart.currentRow()
+            if status == 0x01:
+                QMessageBox.information(self, "Success...", "주문을 완료했습니다.")
+                
+                self.socket.sendData({"command":"SC", "status":0x03, "user_id":self.user_id})
 
-        quantity = int(self.tbShoppingCart.cellWidget(row, 2).value())
-        price = int(self.tbShoppingCart.item(row, 3).text()) / quantity
+    def checkout(self):
+        row = self.tbShoppingCart.rowCount()
 
-        self.tbShoppingCart.setItem(row, 3, QTableWidgetItem(price * quantity))
+        if row == 0:
+            QMessageBox.warning(self, "Faild...", "주문할 상품이 없습니다.")
+        else:
+            cart_id = [self.tbShoppingCart.item(idx, 0).text() for idx in range(row)]
 
+            data = {
+                "command" : "CO",
+                "status" : 0x00,
+                "cart_id" : cart_id,
+                "user_id" : self.user_id
+            }
+            self.socket.sendData(data)
+
+    def changedSpin(self, value, row):
+        unitPrice = self.tbShoppingCart.item(row, 3).data(Qt.UserRole)
+        price = unitPrice * value
+        price_item = QTableWidgetItem(format(price, ",d"))
+        price_item.setData(Qt.UserRole, unitPrice)
+        self.tbShoppingCart.setItem(row, 3, price_item)
+
+        totalPrice = 0
+        for row in range(self.tbShoppingCart.rowCount()):
+            price_text = self.tbShoppingCart.item(row, 3).text().replace(",", "")
+            totalPrice += int(price_text)
+        
+        self.lblTotalPrice.setText(format(totalPrice, ",d"))
+        
 
     def modifyShoppingCart(self):
         row = self.tbShoppingCart.currentRow()
@@ -169,7 +218,7 @@ class WindowClass(QMainWindow, from_class):
 
             data = {
                 "command" : "SC",
-                "status" : 5,
+                "status" : 0x05,
                 "cart_id" : cart_id,
                 "quantity" : quantity
             }
@@ -185,7 +234,7 @@ class WindowClass(QMainWindow, from_class):
 
             data = {
                 "command" : "SC",
-                "status" : 6,
+                "status" : 0x06,
                 "user_id" : self.user_id,
                 "cart_id" : cart_id
             }
@@ -207,7 +256,7 @@ class WindowClass(QMainWindow, from_class):
         else:
             data = {
                 "command" : "SC",
-                "status" : 0,
+                "status" : 0x00,
                 "user_id" : self.user_id,
                 "product_id" : product_id,
                 "quantity" : requestQuantity
@@ -248,10 +297,23 @@ class WindowClass(QMainWindow, from_class):
 
     def tabChanged(self):
         current_tab = self.tabWidget.currentWidget().objectName()
-        if current_tab in ("tab_2"):
+        print(current_tab)
+        if current_tab == "tab":
+            data = {
+                "command" : "IN"
+            }
+            self.socket.sendData(data)
+        elif current_tab == "tab_2":
             data = {
                 "command" : "SC",
-                "status" : 3,
+                "status" : 0x03,
+                "user_id" : self.user_id
+            }
+            self.socket.sendData(data)
+        elif current_tab == "tab_3":
+            data = {
+                "command" : "OL",
+                "status" : 0x00,
                 "user_id" : self.user_id
             }
             self.socket.sendData(data)
@@ -263,13 +325,16 @@ class WindowClass(QMainWindow, from_class):
         self.tbOrder.setColumnWidth(3, 50)
         self.tbOrder.setColumnWidth(4, 50)
 
-    def closeEvent(self, a0):
+    def closeEvent(self, event):
         if self.login_id != "":
             data = {
-                "command" : "LO",
-                "id" : self.login_id
+                "command": "LO",
+                "id": self.login_id
             }
             self.socket.sendData(data)
+
+        if event:
+            event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
