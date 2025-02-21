@@ -98,7 +98,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -258,7 +258,7 @@
     <attribute name="title">
      <string>장바구니</string>
     </attribute>
-    <widget class="QTableWidget" name="tableWidget">
+    <widget class="QTableWidget" name="tbShoppingCart">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -301,7 +301,7 @@
       <string>총 금액 :</string>
      </property>
     </widget>
-    <widget class="QLabel" name="lablTotalPrice">
+    <widget class="QLabel" name="lblTotalPrice">
      <property name="geometry">
       <rect>
        <x>260</x>
@@ -358,7 +358,7 @@
     <attribute name="title">
      <string>주문목록</string>
     </attribute>
-    <widget class="QTableWidget" name="tableWidget_2">
+    <widget class="QTableWidget" name="tbOrderList">
      <property name="geometry">
       <rect>
        <x>10</x>
