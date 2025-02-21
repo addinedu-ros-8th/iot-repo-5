@@ -88,11 +88,23 @@ mp4 - video
 ### Structure 
 
 ### Architecture  
+#### SW
+![Image](https://github.com/user-attachments/assets/a2228d6d-e6c4-48aa-936c-80c851946586)
+
+#### HW
+![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
 
 ### ERD 
 
 ### Fuction 
 #### Server
+|  기능  | 설명 |
+|--------|------|-----|
+| leader | 이태민 |  로봇 SW|   
+| worker | 강주빈 |  로봇 SW, 기구 및 트랙 설계 |   
+| worker | 신동철 |  사용자/관리자 GUI, DB 구축, 로봇 및 진열대 설계|    
+| worker | 황한문 |  진열대-로봇 통신, github 관리, 서포트|    
+
 #### Client   
 #### Controller    
 
