@@ -62,6 +62,10 @@ class Server(QTcpServer):
                         data = struct.pack("<2sBc", command.encode(), 0x02, b'\n')
                         QTimer.singleShot(500, lambda:self.socketDelay(client_socket, data))
             else:
+                print(data)
+                command = data["command"]
+                status = data["status"]
+
                 if command == "AT":
                     self.client_list[status] = client_socket
                     
