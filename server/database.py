@@ -25,6 +25,24 @@ class pickup_database:
             cursor.execute(query, param)
 
             self.conn.commit()
+
+            return cursor.lastrowid
+        except Exception as e:
+            print("failed excute query...", e)
+            return None
+        finally:
+            cursor.close()
+    
+    def execute_many(self, query, param=None):
+        if not self.conn.is_connected():
+            print("not connected db...")
+            return
+        
+        cursor = self.conn.cursor()
+        try:
+            cursor.executemany(query, param)
+
+            self.conn.commit()
         except Exception as e:
             print("failed excute query...", e)
             return
