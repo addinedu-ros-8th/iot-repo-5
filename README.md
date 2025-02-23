@@ -94,7 +94,8 @@ mp4 - video
 #### HW
 ![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
 
-### ERD 
+### DB 
+<img width="880" alt="Image" src="https://github.com/user-attachments/assets/840c1adc-654b-4ff1-8140-f7beb26c61c8" />
 
 ### Fuction 
 #### Server
