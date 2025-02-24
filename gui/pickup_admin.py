@@ -16,7 +16,7 @@ class Client(QTcpSocket):
     def __init__(self):
         super(Client, self).__init__()
 
-        self.connected.connect(self.on_connected)
+        #self.connected.connect(self.on_connected)
         self.readyRead.connect(self.receiveData)
         #self.send_data.connect(self.sendData)
 
@@ -31,13 +31,35 @@ class Client(QTcpSocket):
             data = json.dumps(message, default=str)
             self.write(data.encode('utf-8'))
 
-    def on_connected(self):
-        print("connected server")
+class AddProductWindow(QDialog):
+    def __init__(self, socket):
+        super().__init__()
 
+        a = os.path.join(os.path.dirname(__file__), 'add_product.ui') 
+        self.ui = uic.loadUi(a, self)
+        self.setWindowTitle("상품 등록")
+        self.socket = socket
+
+        self.cbCategory.addItem("과자")
+        self.cbCategory.addItem("아이스크림")
+        self.cbCategory.addItem("사탕")
+
+        self.btnAddProduct.clicked.connect(self.addProduct)
+
+    def addProduct(self):
+        data = {
+            "command" : "AP",
+            "status" : 0x00,
+            "name" : self.editProductName.text(),
+            "price" : int(self.editPrice.text()),
+            "category" : self.cbCategory.currentText(),
+            "quantity" : int(self.editQuantity.text()),
+            "uid" : self.editSection.text()
+        }
+        self.socket.sendData(data)
 
 class WindowClass(QMainWindow, from_class):
-    conn = None
-    login = ""
+    login_id = ""
     name = ""
     user_id = 0
 
@@ -48,6 +70,10 @@ class WindowClass(QMainWindow, from_class):
         self.setWindowTitle("Administrator")
 
         self.setHeaderSisze()
+
+        self.socket = Client()
+        self.socket.connectToHost(QHostAddress("192.168.0.2"), 8889)
+        self.socket.receive_data.connect(self.receiveData)
         
         self.editPW.setEchoMode(QLineEdit.Password)
 
@@ -66,34 +92,101 @@ class WindowClass(QMainWindow, from_class):
 
         self.btnLogin.clicked.connect(self.loginClicked)
         self.editPW.returnPressed.connect(self.loginClicked)
-        self.test.clicked.connect(self.testLog)
         self.tbOrder.itemClicked.connect(self.clickOrderProduct)
         self.btnOrder.clicked.connect(self.order)
         self.tbInventory.itemDoubleClicked.connect(self.inventoryStore)
         self.tbOrderList.itemDoubleClicked.connect(self.deleteOrderList)
         self.tabWidget.currentChanged.connect(self.tabChanged)
         self.tabWidget.setCurrentIndex(0)
+        self.btnAddSection.clicked.connect(self.addSection)
 
-        self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
-        self.socket.receive_data.connect(self.receiveData)
+    def receiveData(self, data):
+        command = data["command"]
 
-    def testLog(self):
-        sql = "update user set status = 0 where login_id = 'admin'"
-        self.conn.execute_query(sql)
+        if command == "LI":
+            status = data["status"]
 
-        self.tabWidget.setEnabled(True)
+            if status == 0x02:
+                QMessageBox.warning(self, "Login Failed...", "이미 로그인중인 계정입니다.")
+            elif status == 0x00:
+                QMessageBox.warning(self, "Login Failed...", "아이디, 패스워드를 다시 입력해주세요.")
+                self.editID.clear()
+                self.editPW.clear()
+                self.editID.setFocus()
+            elif status == 0x01:
+                QMessageBox.warning(self, "Login Success", "로그인 성공")
+                self.groupBox.setEnabled(False)
+                self.tabWidget.setEnabled(True)
+
+                self.login_id = self.editID.text()
+                self.name = data["name"]
+                self.user_id = data["user_id"]
+
+                self.socket.sendData({"command":"IN"})
+        elif command == "AP":
+            if data["status"] == 0x01:
+                QMessageBox.information(self, "Success...", "물품 등록 성공")
+        elif command == "IN":
+            self.tbInventory.clearContents()
+            self.tbInventory.setRowCount(0)
+            self.tbOrder.clearContents()
+            self.tbOrder.setRowCount(0)
+            self.lblProductName.setText("")
+            self.lblQuantity.setText("")
+            self.spinQuantity.setValue(0)
+            
+            for items in data["data"]:
+                row = self.tbInventory.rowCount()
+                self.tbInventory.insertRow(row)
+                self.tbOrder.insertRow(row)
+                for idx, item in enumerate(items):                    
+                    self.tbInventory.setItem(row, idx, QTableWidgetItem(str(item)))
+
+                price = int(self.tbInventory.item(row, 4).text())
+                self.tbInventory.setItem(row, 4, QTableWidgetItem(format(price, ",d")))
+
+                self.tbOrder.setItem(row, 0, QTableWidgetItem(str(items[0])))
+                self.tbOrder.setItem(row, 1, QTableWidgetItem(items[1]))
+                self.tbOrder.setItem(row, 2, QTableWidgetItem(items[2]))
+                self.tbOrder.setItem(row, 3, QTableWidgetItem(str(items[3])))
+        elif command == "OL":
+            for items in data["data"]:
+                row = self.tbOrderList.rowCount()
+                self.tbOrderList.insertRow(row)
+
+                order_id = items[6]
+                user_name = items[5]
+                product_name = items[0]
+                quantity = items[1]
+                status = items[3]
+                date = items[4]
+
+                self.tbOrderList.setItem(row, 0, QTableWidgetItem(str(order_id)))
+                self.tbOrderList.setItem(row, 1, QTableWidgetItem(user_name))
+                self.tbOrderList.setItem(row, 2, QTableWidgetItem(product_name))
+                self.tbOrderList.setItem(row, 3, QTableWidgetItem(str(quantity)))
+                if status == 0:
+                    text = "주문접수"
+                elif status == 1:
+                    text = "상품적재중"
+                elif status ==2 :
+                    text = "픽업요청"
+                self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(text)))
+                self.tbOrderList.setItem(row, 5, QTableWidgetItem(str(date).split(" ")[0]))
+
+    def addSection(self):
+        product_windows = AddProductWindow(self.socket)
+        product_windows.show()
 
     def tabChanged(self):
         current_tab = self.tabWidget.currentWidget().objectName()
-        if current_tab in ("tab_4", "tab"):     # 물품재고, 물품주문 탭
-            self.updateOrderList()
-        elif current_tab == "tab_2":            # 주문목록 탭
-            self.lblProductName.setText("")
-            self.lblQuantity.setText("")
-            self.editOrderQuantity.clear()
+        if current_tab in ("tab", "tab_2"):     # 물품재고, 물품주문 탭
+            if self.socket is not None:
+                self.socket.sendData({"command":"IN"})
+        elif current_tab == "tab_4":            # 주문목록 탭
+            self.socket.sendData({"command":"OL", "status":0x00, "user_id":None})
         elif current_tab == "tab_3":            # 로그 탭
-            self.updateLog()
+            pass
 
     def deleteOrderList(self):
         row = self.tbOrderList.currentRow()
@@ -128,21 +221,20 @@ class WindowClass(QMainWindow, from_class):
 
     def order(self):
         inventoryQuantity = int(self.lblQuantity.text())
-        if inventoryQuantity == 0:
-            QMessageBox.warning(self, "Order Failed...", "해당 물품은 품절입니다.")
-            return
-
-        quantity = int(self.editOrderQuantity.text())
+        quantity = int(self.spinQuantity.value())
 
         if inventoryQuantity < quantity:
             QMessageBox.warning(self, "Order Failed...", "재고량보다 많이 주문할 수 없습니다.")
-            self.editOrderQuantity.setFocus()
         else:
             product_id = self.tbOrder.item(self.tbOrder.currentRow(), 0).text()
-            if self.orderQuery(self.user_id, product_id, quantity):
-                QMessageBox.information(self, "Order Success...", self.lblProductName.text() + " " + str(quantity) + "개를 주문하였습니다.")
-                self.updateProductList()
-                #self.lblQuantity.setText(str(updateQuantity))
+            
+            data = {
+                "command" : "CH",
+                "status" : 0x03,
+                "user_id" : self.user_id,
+                "data" : [product_id, quantity]
+            }
+            self.socket.sendData(data)
 
     def clickOrderProduct(self):
         row = self.tbOrder.currentRow()
@@ -151,28 +243,14 @@ class WindowClass(QMainWindow, from_class):
 
         self.lblProductName.setText(name)
         self.lblQuantity.setText(quantity)
+        self.spinQuantity.setMinimum(1)
         self.spinQuantity.setMaximum(int(quantity))
-
-    def updateOrderList(self):
-        self.tbOrderList.clearContents()
-        self.tbOrderList.setRowCount(0)
-        
-        result = self.orderListQuery()
-
-        for i in result:
-            row = self.tbOrderList.rowCount()
-            self.tbOrderList.insertRow(row)
-            for idx, item in enumerate(i):
-                self.tbOrderList.setItem(row, idx, QTableWidgetItem(str(item)))
 
     def updateProductList(self):
         self.tbInventory.clearContents()
         self.tbInventory.setRowCount(0)
         self.tbOrder.clearContents()
         self.tbOrder.setRowCount(0)
-
-
-        list = self.productListQuery()
         
         for i in list:
             row = self.tbInventory.rowCount()
@@ -203,7 +281,7 @@ class WindowClass(QMainWindow, from_class):
         
         data = {
             "command" : "LI",
-            "id" : id,
+            "login_id" : id,
             "pw" : pw
         }
         
