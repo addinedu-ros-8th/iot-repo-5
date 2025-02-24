@@ -95,19 +95,26 @@ mp4 - video
 ![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
 
 ### DB 
-<img width="880" alt="Image" src="https://github.com/user-attachments/assets/840c1adc-654b-4ff1-8140-f7beb26c61c8" />
+![Image](https://github.com/user-attachments/assets/db91dcca-73be-405f-91e4-150dc0bc62d5)
 
 ### Fuction 
-#### Server
+#### Function list 
 |  기능  | 설명 |
-|--------|------|-----|
-| leader | 이태민 |  로봇 SW|   
-| worker | 강주빈 |  로봇 SW, 기구 및 트랙 설계 |   
-| worker | 신동철 |  사용자/관리자 GUI, DB 구축, 로봇 및 진열대 설계|    
-| worker | 황한문 |  진열대-로봇 통신, github 관리, 서포트|    
+|--------|------| 
+| Auth  | ID,PW 인증관리 |    
+| Stock | 재고확인, 재고업데이트 |     
+| Order | 제품검색, 제품수량선택, 재고없는 제품은 주문 불가능 |      
+| Move | 로봇이 Home station에서 각 상품 위치로 이동, Pickup station으로 이동 |     
+| Detect| 로봇의 장애물 감지시 경고 알림(LED, Buzzer), RFID Tag를 통한 상품 위치 인식|
+| Load | 진열대에서 물품 개수만큼 카트에 투하, 올바른 적재 확인 |
+| Control | 관리자는 로봇을 자동/수동 제어 | 
 
-#### Client   
-#### Controller    
+#### Client 주문 
+#### Admin  로봇 수동제어, 재고수정및 관리  
+#### Controller 적재, 이동, 전달    
+  #####  진열대 
+  #####  로봇 
+
 
 ## Test Case
 ## Project Schedule
