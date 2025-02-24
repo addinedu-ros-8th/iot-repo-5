@@ -88,10 +88,10 @@ mp4 - video
 ### Structure 
 
 ### Architecture  
-#### SW
+#### 1) SW
 ![Image](https://github.com/user-attachments/assets/a2228d6d-e6c4-48aa-936c-80c851946586)
 
-#### HW
+#### 2) HW
 ![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
 
 ### DB 
