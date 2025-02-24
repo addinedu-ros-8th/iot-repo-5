@@ -461,17 +461,24 @@ def robotServerReceive(data):
     if command == "AT":
         if data["status"] == 0x02:
             print("Connect Robot Server")
-
+    elif command == "TL":
+        if data["status"] == 0x00:
             result = fetchSection()
-            print(result)
-            #client.sendData({"command":"TL"})
+            data = {"command":"TL", "status":0x01, "data":result}
+            client.sendData(data)
 
 def fetchSection():
     sql = "select uid from section"
     result = conn.fetch_all(sql)
 
+    data = []
     for uid in result:
-        print(uid)
+        hex = str(uid[0]).split("-")
+        hex_value = [int(value, 16) for value in hex]
+
+        data.append(hex_value)
+
+    return data
         
 
 if __name__ == "__main__":
