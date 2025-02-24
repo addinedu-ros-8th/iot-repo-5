@@ -109,8 +109,12 @@ mp4 - video
 | Load | 진열대에서 물품 개수만큼 카트에 투하, 올바른 적재 확인 |
 | Control | 관리자는 로봇을 자동/수동 제어 | 
 
-#### Client 주문 
+#### Client 
+![Image](https://github.com/user-attachments/assets/5c8b4340-f920-48ad-b42c-772034872c96)
+
 #### Admin  로봇 수동제어, 재고수정및 관리  
+![Image](https://github.com/user-attachments/assets/6fc59766-d309-4134-a80d-dd29f08eb7dc)
+
 #### Controller 적재, 이동, 전달    
   #####  진열대 
   #####  로봇 
