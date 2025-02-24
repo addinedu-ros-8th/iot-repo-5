@@ -82,18 +82,14 @@ mp4 - video
 
 
 ## Design
-
 ### Scenario
-#### 1) Simple
+#### 1) Simple Diagram
 ![Image](https://github.com/user-attachments/assets/e1c22b09-117d-44b7-bf4d-6ef9c9801795)
-#### 2) State 
-
-### Structure 
+#### 2) State Diagram 
 
 ### Architecture  
 #### 1) SW
 ![Image](https://github.com/user-attachments/assets/a2228d6d-e6c4-48aa-936c-80c851946586)
-
 #### 2) HW
 ![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
 
@@ -124,5 +120,15 @@ mp4 - video
 
 
 ## Test Case
+|  기능  | 설명 | 결과 |
+|--------|------|------| 
+| 1. 물품적재 | Client가 주문한 수량과 물품이 카트에 적재되는가? | fail |    
+| 2. 재고오류 | 재고가 주문한 수량보다 적을시, 주문이 실패하는가? | fail |     
+|| 관리자가 재고를 업데이트시, 반영이 되는가? | fail |
+| 3. 로봇이동 | 장애물 감지시, 알람을 울리는가? | fail |      
+|| 요청한 ID로 정확하게 이동하는가?  | fail |    
+|| pickup station과 home station 이동이 원활한가? | fail |
+| 4. 인증 | 사용자와 관리자 인증에 문제가 없는가? | fail |
+ 
 ## Project Schedule
 Project Period: 2025.02.19~2025.02.26
