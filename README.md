@@ -84,7 +84,10 @@ mp4 - video
 ## Design
 
 ### Scenario
+#### Simple
 ![Image](https://github.com/user-attachments/assets/e1c22b09-117d-44b7-bf4d-6ef9c9801795)
+#### State 
+
 ### Structure 
 
 ### Architecture  
