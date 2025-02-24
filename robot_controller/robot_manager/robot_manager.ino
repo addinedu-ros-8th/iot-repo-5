@@ -1,16 +1,6 @@
 #include <Wire.h>
 #include <MPU6050.h>
 
-MPU6050 mpu;
-
-float targetYaw = 0;  // 목표 방향 (처음 시작 방향)
-float gyroZ_offset = 0; // 자이로 Z축 오프셋 (드리프트 보정)
-float yaw = 0;
-
-float previousError = 0;
-float integral = 0;
-unsigned long lastTime = 0;
-
 // === 핀 설정 ===
 // IR 센서 핀 설정
 const int IR_L = 2;  // 왼쪽 IR 센서
@@ -39,8 +29,45 @@ const int BUZZER_PIN = A0; // Fuzzer
 const int MPU_UPDATE_INTERVAL = 10; // 센서 데이터 10ms 주기로 갱신
 const int ERROR_MARGIN = 20; // 20도 이내 오차 허용
 
+MPU6050 mpu;
+
+float targetYaw = 0;  // 목표 방향 (처음 시작 방향)
+float gyroZ_offset = 0; // 자이로 Z축 오프셋 (드리프트 보정)
+float yaw = 0;
+
+float previousError = 0;
+float integral = 0;
+unsigned long lastTime = 0;
+
 // 초기 모터 속도 (0~255)
 int motorSpeed = 150;
+
+// Fuctions
+// === 속도 설정 함수 ===
+void setMotorSpeed(int leftSpeed, int rightSpeed);
+// === 모터 제어 함수 ===
+void moveForward();
+void moveBackward();
+void turnLeft();
+void turnRight();
+void gyroturnRight();
+void gyroturnLeft();
+void stopMotors();
+void lineTrace();
+// === 초음파 센서 거리 측정 함수 ===
+long getDistance();
+// === 장애물 감지 및 경고 ===
+bool checkObstacle();
+void updateYaw();
+// === 자이로 Z축 오프셋 보정 함수 ===
+void calibrateGyroZ();
+// Yaw 변화율 가져오기
+float getYawRate();
+// 현재 Yaw 가져오기
+float getYaw();
+// Robot 회전 함수
+void rotateToAngle(float targetAngle);
+void rotate(float angle);
 
 void setup()
 {
@@ -91,6 +118,13 @@ void setup()
   digitalWrite(RED_LED, LOW);
   digitalWrite(BUZZER_PIN, LOW);
 }
+
+void loop()
+{
+
+  
+}
+
 
 // === 속도 설정 함수 ===
 void setMotorSpeed(int leftSpeed, int rightSpeed)
@@ -162,6 +196,25 @@ void stopMotors()
 {
   setMotorSpeed(0, 0); // 속도 0으로 설정하여 정지
   digitalWrite(GREEN_LED, LOW);
+}
+
+void lineTrace() {
+  int leftSensor = digitalRead(IR_L);
+  int centerSensor = digitalRead(IR_C);
+  int rightSensor = digitalRead(IR_R);
+
+  if (centerSensor == 0) 
+  {  
+    moveForward();  // 중앙이 검은색이면 직진
+  } 
+  else if (leftSensor == 0)
+  {  
+    turnLeft();  // 왼쪽이 검은색이면 좌회전
+  }
+  else if (rightSensor == 0)
+  {  
+    turnRight();  // 오른쪽이 검은색이면 우회전
+  }
 }
 
 // === 초음파 센서 거리 측정 함수 ===
@@ -297,13 +350,10 @@ void rotate(float angle)
   rotateToAngle(targetYaw); // rotateToAngle 함수를 사용하여 목표 각도로 회전
 }
 
-void loop()
-{
-  int leftSensor = digitalRead(IR_L);
-  int centerSensor = digitalRead(IR_C);
-  int rightSensor = digitalRead(IR_R);
 
-  /*
+
+// Test code
+/*
   // === 좌측 우측 보정 테스트 ===
   unsigned long currentTime = millis();
   float deltaTime = (currentTime - lastTime) / 1000.0;  
@@ -416,5 +466,4 @@ void loop()
   }
   
   delay(10); */
-}
 
