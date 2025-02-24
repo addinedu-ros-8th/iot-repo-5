@@ -4,7 +4,7 @@ import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QObject
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress
 
 path = os.path.join(os.path.dirname(__file__), 'pickup_user.ui') 
@@ -38,6 +38,41 @@ class Client(QTcpSocket):
     def on_errorOccurred(self):
         self.receive_data.emit({"command":"FAIL"})
 
+class RegistWindow(QDialog):
+    def __init__(self, socket):
+        super().__init__()
+
+        a = os.path.join(os.path.dirname(__file__), 'regist.ui') 
+        self.ui = uic.loadUi(a, self)
+        self.setWindowTitle("회원가입")
+        self.socket = socket
+
+        self.editNewPW.setEchoMode(QLineEdit.Password)
+        self.editNewPW2.setEchoMode(QLineEdit.Password)
+
+        self.btnRegister.clicked.connect(self.regist)
+
+    def regist(self):
+        name = self.editNewName.text()
+        id = self.editNewID.text()
+        pw = self.editNewPW.text()
+        pw2 = self.editNewPW2.text()
+
+        if pw != pw2:
+            QMessageBox.warning(self, "Failed..", "패스워드가 서로 다릅니다.")
+            self.editNewPW.clear()
+            self.editNewPW2.clear()
+            self.editNewPW.setFocus()
+        else:
+            data = {
+                "command" : "REG",
+                "status" : 0x00,
+                "name" : name,
+                "id" : id,
+                "pw" : pw
+            }
+            self.socket.sendData(data)
+
 
 class WindowClass(QMainWindow, from_class):
 
@@ -50,9 +85,11 @@ class WindowClass(QMainWindow, from_class):
         self.setupUi(self)
 
         self.setWindowTitle("User")
+        #self.resize(280, 140)
+        self.setFixedSize(280, 140)
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
         self.socket.receive_data.connect(self.receiveData)
 
         self.groupBox.setEnabled(False)
@@ -75,9 +112,14 @@ class WindowClass(QMainWindow, from_class):
         self.btnDelete.clicked.connect(self.delShoppingCart)
         self.btnModify.clicked.connect(self.modifyShoppingCart)
         self.btnCheckout.clicked.connect(self.checkout)
+        clickable(self.lblRegist).connect(self.showRegistWindow)
 
         self.setHeaderSisze()
         sys.excepthook = self.handle_exception
+
+    def showRegistWindow(self):
+        self.windows = RegistWindow(self.socket)
+        self.windows.show()
 
     def handle_exception(self, exctype, value, traceback):
         self.closeEvent(None)
@@ -95,7 +137,15 @@ class WindowClass(QMainWindow, from_class):
             self.groupBox.setEnabled(False)
         elif command == "ER":
             QMessageBox.warning(self, "Error...", "에러")
-        if command == "LI":
+        elif command == "REG":
+            if data["status"] == 0x01:
+                QMessageBox.information(self.windows, "Success...", "회원가입이 완료되었습니다.")
+                self.windows.close()
+            elif data["status"] == 0x02:
+                QMessageBox.warning(self.windows, "Failed...", "이미 존재하는 계정입니다.")
+            elif data["status"] == 0x03:
+                QMessageBox.warning(self.windows, "Error...", "에러")
+        elif command == "LI":
             status = data["status"]
             
             if status == 0x02:
@@ -113,6 +163,13 @@ class WindowClass(QMainWindow, from_class):
                 self.login_id = self.editID.text()
                 self.name = data["name"]
                 self.user_id = data["user_id"]
+
+                self.hide()
+                self.groupBox.setVisible(False)
+                #self.resize(580, 310)
+                self.setFixedSize(580, 310)
+                self.tabWidget.setGeometry(10, 10, 560, 290)
+                self.show()
 
                 self.socket.sendData({"command":"IN"})
         elif command == "IN":
@@ -171,10 +228,39 @@ class WindowClass(QMainWindow, from_class):
         elif command == "CO":
             status = data["status"]
 
-            if status == 0x01:
+            if status == 0x02:
                 QMessageBox.information(self, "Success...", "주문을 완료했습니다.")
                 
                 self.socket.sendData({"command":"SC", "status":0x03, "user_id":self.user_id})
+            elif status == 0x04:
+                QMessageBox.warning(self, "Failed...", "에러")
+        elif command == "OL":
+            status = data["status"]
+
+            if status == 0x00:
+                self.tbOrderList.clearContents()
+                self.tbOrderList.setRowCount(0)
+                for items in data["data"]:
+                    row = self.tbOrderList.rowCount()
+                    self.tbOrderList.insertRow(row)
+
+                    product_name = items[0]
+                    quantity = items[1]
+                    price = items[2]
+                    status = items[3]
+                    date = items[4]
+
+                    self.tbOrderList.setItem(row, 0, QTableWidgetItem(product_name))
+                    self.tbOrderList.setItem(row, 1, QTableWidgetItem(str(quantity)))
+                    self.tbOrderList.setItem(row, 2, QTableWidgetItem(str(price)))
+                    if status == 0:
+                        text = "주문접수"
+                    elif status == 1:
+                        text = "상품적재중"
+                    elif status == 2:
+                        text = "픽업요청"
+                    self.tbOrderList.setItem(row, 3, QTableWidgetItem(text))
+                    self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(date).split(" ")[0]))
 
     def checkout(self):
         row = self.tbShoppingCart.rowCount()
@@ -272,6 +358,8 @@ class WindowClass(QMainWindow, from_class):
 
         self.lblProductName.setText(name)
         self.lblQuantity.setText(quantity)
+        self.spinQuantity.setValue(1)
+        self.spinQuantity.setMinimum(1)
         self.spinQuantity.setMaximum(int(quantity))
         self.lblPrice.setText(price)
 
@@ -335,6 +423,23 @@ class WindowClass(QMainWindow, from_class):
 
         if event:
             event.accept()
+
+def clickable(widget):
+    class Filter(QObject):
+        clicked = pyqtSignal()	#pyside2 사용자는 pyqtSignal() -> Signal()로 변경
+
+        def eventFilter(self, obj, event):
+            if obj == widget:
+                if event.type() == QEvent.MouseButtonRelease:
+                    if obj.rect().contains(event.pos()):
+                        self.clicked.emit()
+                        # The developer can opt for .emit(obj) to get the object within the slot.
+                        return True
+            return False
+    
+    filter = Filter(widget)
+    widget.installEventFilter(filter)
+    return filter.clicked
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
