@@ -15,11 +15,7 @@ class Client(QTcpSocket):
         self.readyRead.connect(self.receiveData)
 
     def on_connected(self):
-        #data = struct.pack("<2sBc", "AT".encode(), 0x03, b'\n')
-        data = {
-            "command" : "AT",
-            "status" : 0x03
-        }
+        data = {"command" : "AT", "status" : 0x03}
         self.sendData(data)
 
     def receiveData(self):
@@ -32,7 +28,6 @@ class Client(QTcpSocket):
         if self.state() == QTcpSocket.ConnectedState:
             data = json.dumps(message, default=str)
             self.write(data.encode('utf-8'))
-            #self.write(message)
             self.flush()
 
 class Server(QTcpServer):
@@ -75,6 +70,8 @@ class Server(QTcpServer):
         client_socket.write(data.encode("utf-8"))
 
 class OrderStatusChecker(QThread):
+    thread_data = pyqtSignal(dict)
+
     def __init__(self, db_conn):
         super().__init__()
         self.db_conn = db_conn
@@ -88,12 +85,18 @@ class OrderStatusChecker(QThread):
     def check_order_status(self):
         try:
             sql = """
-            select s.id, o.quantity
-            from `order` o, order_group g, section s
-            where g.status = 0 and s.section_id = o.product_id
+            select o.user_id, o.order_group_id, g.status, o.product_id, p.section_id 
+            from `order` o, order_group g, products p
+            where o.order_group_id = g.id and g.status = 0 and p.id = o.product_id
             """
-            result = self.db_conn.fetch_one(sql)
-            if result[0] == 0:
+            result = conn.fetch_one(sql)
+            if result is not None:
+                data = {
+                    "user_id" : result[0],
+                    "group_id" : result[1],
+                    "section_id" : result[4]
+                }
+                self.thread_data.emit(data)
                 self.running = False
         except Exception as e:
             print(f"Error checking order status: {e}")
@@ -101,8 +104,13 @@ class OrderStatusChecker(QThread):
     def stop(self):
         self.running = False
 
+def sendOrderList(data):
+    user_id = data["user_id"]
+    group_id = data["group_id"]
+    section_id = data["section_id"]
+
+
 def processCommand(socket, data):
-    global order_status_checker
     command = data["command"]
     
     if command == "LI":
@@ -125,6 +133,31 @@ def processCommand(socket, data):
         logoutQuery(data['id'])
 
         return
+    elif command == "AP":
+        if data["status"] == 0x00:
+            name = data["name"]
+            price = data["price"]
+            category = data["category"]
+            quantity = data["quantity"]
+            uid = data["uid"]
+
+            status = addNewProduct(name, category, price, quantity, uid)
+
+            data = {"command" : "AP", "status" : status}
+            server.sendData(socket, data)
+    elif command == "REG":
+        if data["status"] == 0x00:
+            name = data["name"]
+            id = data["id"]
+            pw = data["pw"]
+
+            status = registAccount(name, id, pw)
+
+            data = {
+                "command" : "REG",
+                "status" : status
+            }
+            server.sendData(socket, data)
     elif command == "IN":
         status = 0x00
         try:
@@ -219,10 +252,11 @@ def processCommand(socket, data):
             }
             server.sendData(socket, data)
             
-            if not order_status_checker or not order_status_checker.isRunning():
-                order_status_checker = OrderStatusChecker(conn)
+            
+            if not order_status_checker.isRunning():
                 order_status_checker.start()
-
+                
+            
             return
     elif command == "OL":
         status = data["status"]
@@ -237,20 +271,58 @@ def processCommand(socket, data):
             server.sendData(socket, data)
 
             return
+        
+def registAccount(name, id, pw):
+    try:
+        sql = "select * from user where login_id = %s"
+        result = conn.fetch_one(sql, (id,))
 
-def orderListQuery(user_id):
+        print(result)
+
+        if result:
+            return 0x02
+        else:
+            sql = "insert into user(name, login_id, password) values(%s, %s, sha2(%s, 256))"
+            conn.execute_query(sql, (name, id, pw))
+
+            conn.commit()
+    except:
+        conn.rollback()
+        return 0x03
+    
+    return 0x01
+
+def addNewProduct(name, category, price, quantity, uid):
+    try:
+        sql = "insert into products(name, category, quantity, price) values(%s, %s, %s, %s)"
+        row_id = conn.execute_query(sql, (name, category, quantity, price))
+
+        sql = "insert into section(product_id, uid) values(%s, %s)"
+        conn.execute_query(sql,(row_id, uid))
+
+        conn.commit()
+    except:
+        conn.rollback()
+        return 0x02
+    
+    return 0x01
+
+def orderListQuery(user_id=None):
     try:
         sql = """
-        select p.name, o.quantity, p.price, g.status, g.date from 
-        `order` o, products p, order_group g
-        where p.id = o.product_id and
-        g.user_id = %s
+        select p.name, o.quantity, p.price, g.status, g.date, u.name, o.id from 
+        `order` o, products p, order_group g, user u
+        where p.id = o.product_id
+        and g.id = o.order_group_id and o.user_id and u.id
         """
-        result = conn.fetch_all(sql, (user_id, ))
+        if user_id is not None:
+            sql += " and g.user = %s"
+            result = conn.fetch_all(sql, (user_id, ))
+        else:
+            result = conn.fetch_all(sql)
 
         status = 0x00
     except:
-        conn.rollback()
         return {"status":0x07}
 
     return {"data":result, "status":status}
@@ -260,24 +332,34 @@ def checkoutQuery(cart_id, user_id):
         sql = "insert into order_group(user_id) values(%s)"
         group_id = conn.execute_query(sql, (user_id, ))
 
-        sql = """
-        insert into `order`(user_id, product_id, quantity) 
-        select user_id, product_id, quantity from shopping_cart where id = %s
-        """
-        conn.execute_many(sql, (cart_id, ))
+        for i in cart_id:
+            sql = """
+            INSERT INTO `order`(user_id, order_group_id, product_id, quantity) 
+            SELECT s.user_id, %s, s.product_id, s.quantity 
+            FROM shopping_cart s
+            WHERE s.id = %s
+            """
+            conn.execute_query(sql, (group_id, i))
 
-        sql = "delete from shopping_cart where id = %s"
+        sql = "delete from shopping_cart where id in (%s)"
+        placeholders = ', '.join(['%s'] * len(cart_id))  # 필요한 Placeholder를 준비
+        sql = sql % placeholders  # 경로 맞춰 인자 삽입
         conn.execute_many(sql, (cart_id,))
-    except:
+
+        conn.commit()
+    except Exception as e:
+        print("SQL ERROR :", e)
         conn.rollback()
-        return 0x03
+        return 0x04
     
-    return 0x01
+    return 0x02
 
 def modifyShoppingCartQuery(cart_id, quantity):
     try:
         sql = "update shopping_cart set quantity = %s where id = %s"
         conn.execute_query(sql, (quantity, cart_id))
+
+        conn.commit()
     except:
         conn.rollback()
         return 0x07
@@ -288,6 +370,8 @@ def delShoppingCartQuery(user_id, cart_id):
     try:
         sql = "delete from shopping_cart where id = %s and user_id = %s"
         conn.execute_query(sql, (cart_id, user_id))
+
+        conn.commit()
     except:
         conn.rollback()
         return 0x07
@@ -306,7 +390,6 @@ def getShoppingCartQuery(user_id):
 
         status = 0x03
     except:
-        conn.rollback()
         return {"status":0x07}
 
     return {"data":result, "status":status}
@@ -315,6 +398,8 @@ def addShoppingCartQuery(user_id, product_id, quantity):
     try:
         sql = "insert into shopping_cart(user_id, product_id, quantity) values (%s, %s, %s)"
         conn.execute_query(sql, (user_id, product_id, quantity))
+
+        conn.commit()
     except:
         conn.rollback()
         return 0x07
@@ -322,12 +407,12 @@ def addShoppingCartQuery(user_id, product_id, quantity):
     return 0x01
 
 def logoutQuery(id=None):
-        sql = "update user set status = 0"
+    sql = "update user set status = 0"
 
-        if id is not None:
-            sql += " where login_id = '" + id + "'"
+    if id is not None:
+        sql += " where login_id = '" + id + "'"
         
-        conn.execute_query(sql)
+    conn.execute_query(sql)
 
 def productListQuery():
     sql = "select * from products"
@@ -337,8 +422,8 @@ def productListQuery():
     return result
 
 def loginQuery(id, pw):
-    sql = "select status, id, name from user where login_id = '" + id + "' and password = '" + pw + "'"
-    result = conn.fetch_one(sql)
+    sql = "select status, id, name from user where login_id = %s and password = sha2(%s, 256)"
+    result = conn.fetch_one(sql, (id, pw))
     
     if result:
         status = result[0]
@@ -377,12 +462,24 @@ def robotServerReceive(data):
         if data["status"] == 0x02:
             print("Connect Robot Server")
 
+            result = fetchSection()
+            print(result)
+            #client.sendData({"command":"TL"})
+
+def fetchSection():
+    sql = "select uid from section"
+    result = conn.fetch_all(sql)
+
+    for uid in result:
+        print(uid)
+        
+
 if __name__ == "__main__":
     app = QCoreApplication(sys.argv)
     server = Server()
 
     client = Client()
-    client.connectToHost(QHostAddress("192.168.50.92"), 8888)
+    client.connectToHost(QHostAddress("192.168.0.2"), 8888)
     client.receive_data.connect(robotServerReceive)
 
     conn = database.pickup_database(
@@ -392,7 +489,8 @@ if __name__ == "__main__":
         "pickup"
     )
 
-    order_status_checker = None
+    order_status_checker = OrderStatusChecker(conn)
+    order_status_checker.thread_data.connect(sendOrderList)
 
     if server.listen(QHostAddress.Any, server.port):
         print("Order Server listen on port", server.port)
