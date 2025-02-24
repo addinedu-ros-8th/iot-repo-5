@@ -86,6 +86,7 @@ mp4 - video
 #### 1) Simple Diagram
 ![Image](https://github.com/user-attachments/assets/e1c22b09-117d-44b7-bf4d-6ef9c9801795)
 #### 2) State Diagram 
+#### 3) Sequencial Diagram
 
 ### Architecture  
 #### 1) SW
@@ -115,8 +116,8 @@ mp4 - video
 ![Image](https://github.com/user-attachments/assets/6fc59766-d309-4134-a80d-dd29f08eb7dc)
 
 #### Controller 적재, 이동, 전달    
-  #####  진열대 
-  #####  로봇 
+#####  진열대 
+#####  로봇 
 
 
 ## Test Case
