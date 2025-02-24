@@ -4,7 +4,7 @@ import struct
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal, QTimer
+from PyQt5.QtCore import QCoreApplication, QTimer
 from PyQt5.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
 
 class Server(QTcpServer):
@@ -52,17 +52,10 @@ class Server(QTcpServer):
                     status = 0x02
                     self.sendData(client_socket, struct.pack("<2sBc", command.encode(), status, b'\n'))
                 elif command == "TL":
-                    if status == 0:
-                        status = 0x01
-                        uid = [(0xEB, 0xA0, 0xD8, 0x12), (0xC0, 0x11, 0x53, 0x0F)]
-                        # UID를 반대로 저장해야됨
-                        for item in uid:
-                            self.sendData(client_socket, struct.pack("<2sBBBBBc", command.encode(), status, *item, b'\n'))
-                        
-                        data = struct.pack("<2sBc", command.encode(), 0x02, b'\n')
-                        QTimer.singleShot(500, lambda:self.socketDelay(client_socket, data))
+                    if status == 0x00:
+                        data = {"command":"TL", "status":0x00}
+                        self.sendData(self.client_list[3], data, 1)
             else:
-                print(data)
                 command = data["command"]
                 status = data["status"]
 
@@ -74,10 +67,19 @@ class Server(QTcpServer):
                         "status" : 0x02
                     }
                     self.sendData(client_socket, data, 1)
+                elif command == "TL":
+                    robot_socket = self.client_list[0]
+                    uids = [tuple(item) for item in data["data"]]
+                    
+                    for uid in uids:
+                        self.sendData(robot_socket, struct.pack("<2sBBBBBc", command.encode(), status, *uid, b'\n'))
+
+                    data = struct.pack("<2sBc", command.encode(), 0x02, b'\n')
+                    QTimer.singleShot(500, lambda:self.socketDelay(robot_socket, data))
                     
 
-    def socketDelay(self, socket, data):
-        self.sendData(socket, data)
+    def socketDelay(self, socket, data, isOrder=0):
+        self.sendData(socket, data, isOrder)
 
     def disconnected(self, client_socket):
         print(f"client disconnected : {client_socket}")
@@ -111,10 +113,21 @@ def processCommand():
             data = struct.pack("<2sBc", "TL".encode(), status, b'\n')
 
             server.sendData(server.client_list[0], data)
+        elif command[:2] == "od":
+            status = 0x00
+
+            index_list = [0, 1, 2]
+
+            for index in index_list:
+                data = struct.pack("<2sBBc", "OD".encode(), status, index, b'\n')
+                server.sendData(server.client_list[0], data)
+
+            data = struct.pack("<2sBc", "OD".encode(), 0x01, b'\n')
+            QTimer.singleShot(500, lambda:server.socketDelay(server.client_list[0], data))
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QCoreApplication(sys.argv)
     server = Server()
 
     if server.listen(QHostAddress.Any, server.port):
