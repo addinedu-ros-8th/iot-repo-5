@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>물품명 :</string>
+    <string>상품명 :</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
@@ -36,10 +36,10 @@
     </rect>
    </property>
    <property name="text">
-    <string>물품유형 :</string>
+    <string>상품유형 :</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="editProductName">
+  <widget class="QLineEdit" name="editNewProductName">
    <property name="geometry">
     <rect>
      <x>100</x>
@@ -82,10 +82,10 @@
     </rect>
    </property>
    <property name="text">
-    <string>물품가격 :</string>
+    <string>상품가격 :</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="editPrice">
+  <widget class="QLineEdit" name="editNewPrice">
    <property name="geometry">
     <rect>
      <x>100</x>
@@ -105,10 +105,10 @@
     </rect>
    </property>
    <property name="text">
-    <string>물품 등록</string>
+    <string>상품 등록</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="cbCategory">
+  <widget class="QComboBox" name="cbNewCategory">
    <property name="geometry">
     <rect>
      <x>100</x>
@@ -118,7 +118,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QLineEdit" name="editQuantity">
+  <widget class="QLineEdit" name="editNewQuantity">
    <property name="geometry">
     <rect>
      <x>100</x>
