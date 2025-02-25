@@ -306,7 +306,8 @@ class WindowClass(QMainWindow, from_class):
                 "command" : "SC",
                 "status" : 0x05,
                 "cart_id" : cart_id,
-                "quantity" : quantity
+                "quantity" : quantity,
+                "user_id" : self.user_id
             }
             self.socket.sendData(data)
 
