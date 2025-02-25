@@ -24,8 +24,10 @@ const int ECHO_PIN = 12;
 const int OBSTACLE_DISTANCE = 10;
 
 // LED와 Fuzzer 핀
-const int GREEN_LED = 9;  // 주행 중 초록 LED
+const int GREEN_LED = 4;  // 주행 중 초록 LED
 const int RED_LED = 7;    // 장애물 감지 시 빨간 LED
+const int YELLOW_LED = 9;
+
 const int BUZZER_PIN = A0; // Fuzzer
 
 const int MPU_UPDATE_INTERVAL = 10; // 센서 데이터 10ms 주기로 갱신
@@ -49,14 +51,14 @@ float integral = 0;
 unsigned long lastTime = 0;
 
 // 초기 모터 속도 (0~255)
-int motorSpeed = 145;
+int motorSpeed = 160;
 
 uint32_t* tagList;
 
 // Esp01 Status
 enum EspStatus {
-  STATUS_OK,
-  STATUS_ERROR,
+  STATUS_YES,
+  STATUS_NO,
 };
 
 enum RobotStatus {
@@ -112,7 +114,7 @@ int getOrder(uint8_t* data, uint8_t* order);
 bool isTagDetected();
 bool isMaskAll();
 
-int count = 0;
+int cntMask = 0;
 
 void setup()
 {
@@ -178,11 +180,13 @@ void setup()
   // LED와 Fuzzer 핀 모드
   pinMode(GREEN_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
+  pinMode(YELLOW_LED, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   
   // LED 및 Fuzzer 초기화
-  digitalWrite(GREEN_LED, LOW);
-  digitalWrite(RED_LED, LOW);
+  digitalWrite(GREEN_LED, HIGH);
+  digitalWrite(RED_LED, HIGH);
+  digitalWrite(YELLOW_LED, HIGH);
   digitalWrite(BUZZER_PIN, LOW);
   
 }
@@ -194,19 +198,27 @@ void loop()
   static Command cmd = NOTTING;
   static int cntProduct = 0;
   static int cntOrder = 0;
-  static int cntMask = 0;
   static uint8_t data[16];
   static uint8_t order[5];
   
   updateYaw();
   //lineTrace();
+
+  if (Serial.available() > 0) {
+    String str = Serial.readStringUntil('\n');
+    WifiSerial->println(str);
+  }
+
+  if (WifiSerial->available() > 0) {
+    Serial.println(WifiSerial->readStringUntil('\n'));
+  }
   
   if (getDataFromServer(data) > 0) {
     cmd = getCmd(data);
   } else {
     cmd = NOTTING;
   }
-
+  
   if (cmd == GET_ORDER) {
     cntOrder = getOrder(data, order);
     prevRobotStatus = currentRobotStatus;
@@ -222,15 +234,12 @@ void loop()
   } else if (cmd == MOVE_TO_PP) {
     prevRobotStatus = currentRobotStatus;
     currentRobotStatus = MOVING_TO_PP;
+    cntMask = 0;
   } else if (cmd == MOVE_TO_HP) {
-    if (prevRobotStatus == MOVING_TO_PP) {
-
-      // 로봇 180도 회전 후 앞으로 조금 이동
-
-    } else {
-      prevRobotStatus = currentRobotStatus;
-      currentRobotStatus = MOVING_TO_HP;
-    }
+    prevRobotStatus = currentRobotStatus;
+    currentRobotStatus = MOVING_TO_HP;
+    
+    cntMask = 0;
   }
 
   switch (currentRobotStatus) {
@@ -266,27 +275,34 @@ void loop()
             Serial.println(i);
             prevRobotStatus = currentRobotStatus;
             currentRobotStatus = GETTING_PRODUCT;
-            sendCommandToServer("PC", 4, 0x00, i);
+            while (sendCommandToServer("PC", 4, 0x00, i) == STATUS_NO);
             break;
           }
         }
       } else {
         lineTrace();
       }
+      break;
+    case MOVING_TO_PP:
+      if (isMaskAll()) {
+        Serial.print("cntMask: ");
+        Serial.println(++cntMask);
+        if (cntMask == 2) {
+          stopMotors();
+          sendCommandToServer("MV", 3, 0x01);
+          cntMask = 0;
+        }
+      } else {
+        lineTrace();
+      }
+
   }
   
 
+  
+  
+ 
   /*
-  if (Serial.available() > 0) {
-    char ch = Serial.read();
-    WifiSerial->write(ch);
-  }
-
-  if (WifiSerial->available() > 0) {
-    Serial.write(WifiSerial->read());
-  }
-  */
-  
   if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
     for (int i = 0; i < mfrc522.uid.size; i++) {
       Serial.print(mfrc522.uid.uidByte[i], HEX);
@@ -294,7 +310,7 @@ void loop()
     }
     Serial.println();
   }
-  
+  */
 }
 
 
@@ -375,14 +391,6 @@ void lineTrace() {
   int centerSensor = digitalRead(IR_C);
   int rightSensor = digitalRead(IR_R);
   if (isMaskAll()) {
-    Serial.println(++count);
-    if (count == 6) {
-      stopMotors();
-      rotate(180);
-    } else if (count == 7) {
-      stopMotors();
-      rotate(-90);
-    }
     moveForward();
     delay(100);
   } else if (centerSensor && !rightSensor && !leftSensor) {
@@ -533,9 +541,9 @@ void rotate(float angle)
 void connectWifi(String ssid, String pwd) {
   while (1) {
       if (
-        sendCommandToEsp("AT", "OK", 2000) == STATUS_OK &&
-        sendCommandToEsp("AT+CWMODE=1", "OK", 2000) == STATUS_OK &&
-        sendCommandToEsp("AT+CWJAP=\"" + ssid + "\",\"" + pwd + "\"", "OK", 10000) == STATUS_OK
+        sendCommandToEsp("AT", "OK", 2000) == STATUS_YES &&
+        sendCommandToEsp("AT+CWMODE=1", "OK", 2000) == STATUS_YES &&
+        sendCommandToEsp("AT+CWJAP=\"" + ssid + "\",\"" + pwd + "\"", "OK", 10000) == STATUS_YES
       ) {
         Serial.println("Wifi connect success");
         return;
@@ -548,7 +556,7 @@ void connectWifi(String ssid, String pwd) {
 void connectServer(String ip, int port) {
   // Server와 연결이 가능한지 확인
   while (1) {
-    if (sendCommandToEsp("AT+CIPSTART=\"TCP\",\"" + ip + "\"," + String(port), "OK", 5000) == STATUS_OK) {
+    if (sendCommandToEsp("AT+CIPSTART=\"TCP\",\"" + ip + "\"," + String(port), "OK", 5000) == STATUS_YES) {
       Serial.println("Server connect success");
       Serial.println();
       Serial.println("Checking communication available...");
@@ -582,14 +590,17 @@ EspStatus sendCommandToEsp(String command, String expected, int timeout) {
   while (millis() - time < timeout) { // time limit 설정
     String response = WifiSerial->readStringUntil('\n');
     if (response.indexOf(expected) != -1) { // ESP01로부터 수신된게 expected와 같은지 확인
-      return STATUS_OK;
+      return STATUS_YES;
     }
   }
-  return STATUS_ERROR;
+  return STATUS_NO;
 }
 
 EspStatus sendCommandToServer(char* cmd, int length, uint8_t status=255, uint32_t data=4294967295) {
-  if (sendCommandToEsp("AT+CIPSEND=" + String(length + 2), ">", 1000) == STATUS_OK) { // ESP01에게 CIPSEND 명령어 전송, ">" 가 회신되면 정상적으로 송신된 거임
+  if (sendCommandToEsp("AT+CIPSTATUS", "STATUS:3", 2000) == STATUS_YES) {Serial.println("OK!!!");}
+  else {connectServer("192.168.0.41", 8888);}
+  if (sendCommandToEsp("AT+CIPSEND=" + String(length + 2), ">", 5000) == STATUS_YES) { // ESP01에게 CIPSEND 명령어 전송, ">" 가 회신되면 정상적으로 송신된 거임
+    Serial.println("SEND");
     uint8_t sendBuffer[16];
     memset(sendBuffer, 0x00, sizeof(sendBuffer));
     memcpy(sendBuffer, cmd, 2);
@@ -601,29 +612,32 @@ EspStatus sendCommandToServer(char* cmd, int length, uint8_t status=255, uint32_
     }
     WifiSerial->write(sendBuffer, length); // 서버에 보내기
     WifiSerial->println();
+    return STATUS_YES;
+  } else {
+    return STATUS_NO;
   }
 }
 
 int getDataFromServer(char* buffer) {
+  
+  memset(buffer, 0x00, 32);
+  if (WifiSerial->available() == 0) return 0;
   char recvBuffer[32];
   int length = 0;
   memset(recvBuffer, 0x00, 32);
-  memset(buffer, 0x00, 32);
   
   int recvSize = 0;
   // Server로 부터 깔끔하게 값이 수신되지 않아서 Parsing 진행
-  if (WifiSerial->available() > 0){
-      char temp[32] = {0};
-      recvSize = WifiSerial->readBytesUntil('\n', temp, 32); // '\n' 까지 데이터 읽고 size 전달
-      if (recvSize && String(temp).indexOf("+IPD") != -1) { // 수신된 값에서 "+IPD"가 있으면
-        length = recvSize - (String(temp).indexOf(':') + 1) + 1; // Server에서 정확히 송신한 값의 길이
-        temp[recvSize++] = '\n';
-        
-        memcpy(recvBuffer, temp + String(temp).indexOf(':') + 1, length); // 그 길이만큼 recvBuffer에 복사
-      }
-  } else {
-    return 0;
+  
+  char temp[32] = {0};
+  recvSize = WifiSerial->readBytesUntil('\n', temp, 32); // '\n' 까지 데이터 읽고 size 전달
+  if (recvSize && String(temp).indexOf("+IPD") != -1) { // 수신된 값에서 "+IPD"가 있으면
+    length = recvSize - (String(temp).indexOf(':') + 1) + 1; // Server에서 정확히 송신한 값의 길이
+    temp[recvSize++] = '\n';
+    Serial.print(temp);
+    memcpy(recvBuffer, temp + String(temp).indexOf(':') + 1, length); // 그 길이만큼 recvBuffer에 복사
   }
+  
   memcpy(buffer, recvBuffer, length);
   return length;
 }
@@ -675,8 +689,14 @@ int getOrder(uint8_t* data, uint8_t* order) {
       temp[size++] = data[3];
     }
     getDataFromServer(data);
+    delay(500);
   }
-  Serial.println(size);
+  Serial.print("Order List: ");
+  for (int i = 0; i < size; i++) {
+    Serial.print(temp[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
   memcpy(order, temp, size);
   return size;
 }
