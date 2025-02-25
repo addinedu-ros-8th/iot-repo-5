@@ -90,9 +90,9 @@ mp4 - video
 
 ### Architecture  
 #### 1) SW
-![Image](https://github.com/user-attachments/assets/a2228d6d-e6c4-48aa-936c-80c851946586)
+![Image](https://github.com/user-attachments/assets/b98fc788-4aed-4bea-b0fc-99615b5b7f76)
 #### 2) HW
-![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
+![Image](https://github.com/user-attachments/assets/5ea9f2f4-b5dd-4a12-a072-1b8e093264f8)
 
 ### DB 
 ![Image](https://github.com/user-attachments/assets/db91dcca-73be-405f-91e4-150dc0bc62d5)
@@ -112,24 +112,46 @@ mp4 - video
 #### Client 
 ![Image](https://github.com/user-attachments/assets/5c8b4340-f920-48ad-b42c-772034872c96)
 
+|  기능  | 설명 | 결과 |
+|--------|------|------| 
+| 인증 | 사용자 인증을 통해 출입이 가능한가? | Pass |
+| 재고오류 | 재고가 주문한 수량보다 적을시, 주문이 실패하는가? | fail |  
+| 제품검색 | 제품명, 금액, 유형을 통해 제품을 찾을 수 있는가? | Pass |
+|| 매장의 물품 재고를 확인할 수 있는가? | pass |
+| 장바구니 | 장바구니를 통해 물품을 담거나 주문한 내역을 확인이 가능한가 ?| Pass | 
+
+
 #### Admin  로봇 수동제어, 재고수정및 관리  
 ![Image](https://github.com/user-attachments/assets/6fc59766-d309-4134-a80d-dd29f08eb7dc)
 
-#### Controller 적재, 이동, 전달    
-#####  진열대 
-#####  로봇 
-
-
-## Test Case
 |  기능  | 설명 | 결과 |
 |--------|------|------| 
-| 1. 물품적재 | Client가 주문한 수량과 물품이 카트에 적재되는가? | fail |    
-| 2. 재고오류 | 재고가 주문한 수량보다 적을시, 주문이 실패하는가? | fail |     
-|| 관리자가 재고를 업데이트시, 반영이 되는가? | fail |
-| 3. 로봇이동 | 장애물 감지시, 알람을 울리는가? | fail |      
-|| 요청한 ID로 정확하게 이동하는가?  | fail |    
+| 재고관리 | 관리자는 재고를 확인 할 수 있는가? | Pass |
+|| 관리자가 재고를 업데이트시, 반영이 되는가? | Fail |
+| 수동제어 | 로봇의 정지, 전진, 좌회전, 우회전이 가능한가? | Fail |
+|| 각 staation(pickup, home) 이동이 가능한가? | Fail |
+|| 특정 물품으로 이동이 가능한가? | Fail |
+
+#### Controller    
+#####  진열대
+
+|  기능  | 설명 | 결과 |
+|------|------|------| 
+| 통신 | Server와 통신이 원할한가? | Pass |  
+| 물품적재 | Client가 주문한 수량과 물품이 정확하게 카트에 적재되는가? | Pass |  
+
+#####  로봇 
+|  기능  | 설명 | 결과 |
+|--------|------|------| 
+| 로봇이동 | 장애물 감지시, 알람을 울리는가? | fail |    
+|| 요청한 상품 section ID로 정확하게 이동하는가?  | fail | 
 || pickup station과 home station 이동이 원활한가? | fail |
-| 4. 인증 | 사용자와 관리자 인증에 문제가 없는가? | fail |
+|| client가 주문한 물품을 찾아갈 떄까지 pickup station에서 대기 하는가? | fail |
+| 장애물감지 | 경로 상에 장애물을 감지하는가? | fail |
+|| 장애물 감지시 시각적 청각적으로 알람을 울리는가? | fail |
+| 태그인식 | RFID를 정확하게 인식하는가? | fail | 
+|| 읽어온 태그 정보를 바탕으로 주문한 물품인지 판단이 가능한가? | fail |
+
  
 ## Project Schedule
 Project Period: 2025.02.19~2025.02.26
