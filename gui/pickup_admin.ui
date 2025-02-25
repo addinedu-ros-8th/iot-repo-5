@@ -107,7 +107,7 @@
     </size>
    </property>
    <property name="currentIndex">
-    <number>2</number>
+    <number>3</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -423,7 +423,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>1번 섹션</string>
+      <string>홈스테이션</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_4">
@@ -449,7 +449,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>적재중</string>
+      <string>대기중</string>
      </property>
     </widget>
    </widget>
@@ -476,7 +476,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>물품등록</string>
+     <string>상품등록</string>
     </property>
    </widget>
    <widget class="QPushButton" name="btnModifyProduct">
@@ -489,7 +489,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>물품 수정</string>
+     <string>상품 수정</string>
     </property>
    </widget>
   </widget>

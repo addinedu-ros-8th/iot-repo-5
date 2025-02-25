@@ -40,9 +40,9 @@ class AddProductWindow(QDialog):
         self.setWindowTitle("상품 등록")
         self.socket = socket
 
-        self.cbCategory.addItem("과자")
-        self.cbCategory.addItem("아이스크림")
-        self.cbCategory.addItem("사탕")
+        self.cbNewCategory.addItem("과자")
+        self.cbNewCategory.addItem("아이스크림")
+        self.cbNewCategory.addItem("사탕")
 
         self.btnAddProduct.clicked.connect(self.addProduct)
 
@@ -50,13 +50,67 @@ class AddProductWindow(QDialog):
         data = {
             "command" : "AP",
             "status" : 0x00,
-            "name" : self.editProductName.text(),
-            "price" : int(self.editPrice.text()),
-            "category" : self.cbCategory.currentText(),
-            "quantity" : int(self.editQuantity.text()),
+            "name" : self.editNewProductName.text(),
+            "price" : int(self.editPriNewce.text()),
+            "category" : self.cbNewCategory.currentText(),
+            "quantity" : int(self.editNewQuantity.text()),
             "uid" : self.editSection.text()
         }
         self.socket.sendData(data)
+
+class ModifyProduct(QDialog):
+    def __init__(self, socket):
+        super().__init__()
+
+        a = os.path.join(os.path.dirname(__file__), 'product_modify.ui') 
+        self.ui = uic.loadUi(a, self)
+        self.setWindowTitle("상품 수정")
+        self.socket = socket
+
+        self.requestProduct()
+
+        self.cbProductName.currentIndexChanged.connect(self.changeProduct)
+        self.btnModify.clicked.connect(self.modifyProduct)
+
+    def modifyProduct(self):
+        product_name = self.cbProductName.currentText()
+        product_id = self.lblProductID.text()
+        category = self.editCategory.text()
+        price = self.editPrice.text()
+
+        data = {
+            "command" : "MP",
+            "status" : 0x02,
+            "product_name" : product_name,
+            "product_id" : product_id,
+            "category" : category,
+            "price" : price
+        }
+        self.socket.sendData(data)
+
+    def changeProduct(self):
+        product_name = self.cbProductName.currentText()
+        
+        self.socket.sendData({"command":"MP", "status":0x01, "name":product_name})
+
+    def initProductInfo(self, data):
+        product_id = data["data"][0]
+        category = data["data"][1]
+        price = data["data"][2]
+
+        self.lblProductID.setText(str(product_id))
+        self.editCategory.setText(category)
+        self.editPrice.setText(str(price))
+
+    def requestProduct(self):
+        self.socket.sendData({"command":"MP","status":0x00})
+
+    def initProductList(self, data):
+        self.cbProductName.clear()
+        
+        for item in data["data"]:
+            self.cbProductName.addItem(str(item)[2:-2])
+    
 
 class WindowClass(QMainWindow, from_class):
     login_id = ""
@@ -99,6 +153,7 @@ class WindowClass(QMainWindow, from_class):
         self.tabWidget.currentChanged.connect(self.tabChanged)
         self.tabWidget.setCurrentIndex(0)
         self.btnAddSection.clicked.connect(self.addSection)
+        self.btnModifyProduct.clicked.connect(self.modifyProduct)
 
     def receiveData(self, data):
         command = data["command"]
@@ -125,7 +180,21 @@ class WindowClass(QMainWindow, from_class):
                 self.socket.sendData({"command":"IN"})
         elif command == "AP":
             if data["status"] == 0x01:
-                QMessageBox.information(self, "Success...", "물품 등록 성공")
+                QMessageBox.information(self.product_windows, "Success...", "상품 등록 성공")
+        elif command == "MP":
+            status = data["status"]
+            if status == 0x00:
+                self.product_modify.initProductList(data)
+            elif status == 0x01:
+                self.product_modify.initProductInfo(data)
+            elif status == 0x02:
+                QMessageBox.information(self.product_modify, "Success", "상품 수정 완료")
+                self.product_modify.lblProductID.setText("")
+                self.product_modify.cbProductName.setCurrentText("")
+                self.product_modify.editCategory.setText("")
+                self.product_modify.editPrice.setText("")
+            elif status == 0x03:
+                QMessageBox.warning(self.product_modify, "Failed...", "상품 수정 실패")
         elif command == "IN":
             self.tbInventory.clearContents()
             self.tbInventory.setRowCount(0)
@@ -174,9 +243,13 @@ class WindowClass(QMainWindow, from_class):
                 self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(text)))
                 self.tbOrderList.setItem(row, 5, QTableWidgetItem(str(date).split(" ")[0]))
 
+    def modifyProduct(self):
+        self.product_modify = ModifyProduct(self.socket)
+        self.product_modify.show()
+
     def addSection(self):
-        product_windows = AddProductWindow(self.socket)
-        product_windows.show()
+        self.product_windows = AddProductWindow(self.socket)
+        self.product_windows.show()
 
     def tabChanged(self):
         current_tab = self.tabWidget.currentWidget().objectName()
@@ -184,7 +257,7 @@ class WindowClass(QMainWindow, from_class):
             if self.socket is not None:
                 self.socket.sendData({"command":"IN"})
         elif current_tab == "tab_4":            # 주문목록 탭
-            self.socket.sendData({"command":"OL", "status":0x00, "user_id":None})
+            self.socket.sendData({"command":"OL", "status":0x00, "user_id":self.user_id})
         elif current_tab == "tab_3":            # 로그 탭
             pass
 
