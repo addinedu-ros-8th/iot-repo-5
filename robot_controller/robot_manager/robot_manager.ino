@@ -1,11 +1,13 @@
 #include <Wire.h>
 #include <MPU6050.h>
+#include <MFRC522.h>
+#include <SPI.h>
 
-// === 핀 설정 ===
+// Constant
 // IR 센서 핀 설정
-const int IR_L = 2;  // 왼쪽 IR 센서
-const int IR_C = 3;  // 가운데 IR 센서
-const int IR_R = 4;  // 오른쪽 IR 센서
+const int IR_L = A1;  // 왼쪽 IR 센서
+const int IR_C = A2;  // 가운데 IR 센서
+const int IR_R = A3;  // 오른쪽 IR 센서
 
 // 모터 드라이버 핀 설정 (L9110S 기준)
 const int MOTOR_R_IN1 = 5;   // 오른쪽 모터 방향 1 HIGH 시 전진
@@ -27,9 +29,16 @@ const int RED_LED = 7;    // 장애물 감지 시 빨간 LED
 const int BUZZER_PIN = A0; // Fuzzer
 
 const int MPU_UPDATE_INTERVAL = 10; // 센서 데이터 10ms 주기로 갱신
-const int ERROR_MARGIN = 20; // 20도 이내 오차 허용
+const int ERROR_MARGIN = 10; // 20도 이내 오차 허용
 
+const HardwareSerial* WifiSerial = &Serial1;
+
+const int SS_PIN = 53;
+const int RST_PIN = 54;
+
+// Variables
 MPU6050 mpu;
+MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 float targetYaw = 0;  // 목표 방향 (처음 시작 방향)
 float gyroZ_offset = 0; // 자이로 Z축 오프셋 (드리프트 보정)
@@ -40,7 +49,30 @@ float integral = 0;
 unsigned long lastTime = 0;
 
 // 초기 모터 속도 (0~255)
-int motorSpeed = 150;
+int motorSpeed = 145;
+
+uint32_t* tagList;
+
+// Esp01 Status
+enum EspStatus {
+  STATUS_OK,
+  STATUS_ERROR,
+};
+
+enum RobotStatus {
+  HOME, WAIT, STOP, MOVING_TO_SEC,
+  GETTING_PRODUCT, MOVING_TO_PP, MOVING_TO_HP
+};
+
+enum Command {
+  NOTTING, GET_ORDER, RESUME,
+  MOVE_TO_PP, MOVE_TO_HP
+};
+
+// status init
+EspStatus espStatus;
+RobotStatus robotStatus;
+Command command;
 
 // Fuctions
 // === 속도 설정 함수 ===
@@ -69,13 +101,31 @@ float getYaw();
 void rotateToAngle(float targetAngle);
 void rotate(float angle);
 
+EspStatus sendCommandToEsp(String command, String expected, int timeout);
+void connectWifi(String ssid, String pwd);
+void connectServer(String ip, int port);
+EspStatus sendCommandToServer(char* cmd, int length, uint8_t status=255, uint32_t data=4294967295);
+int getDataFromServer(char* buffer);
+uint32_t* getTagList();
+Command getCmd(uint8_t* data);
+int getOrder(uint8_t* data, uint8_t* order);
+bool isTagDetected();
+bool isMaskAll();
+
+int count = 0;
+
 void setup()
 {
   Serial.begin(115200);
+  WifiSerial->begin(115200);
   Wire.begin();
   mpu.initialize();
   Serial.println("MPU6050 초기화 중...");
 
+  SPI.begin();			// Init SPI bus
+	mfrc522.PCD_Init();		// Init MFRC522
+  analogWrite(BUZZER_PIN, 0);
+  
   // 자이로 센서 초기화 확인
   if (!mpu.testConnection())
   {
@@ -91,7 +141,24 @@ void setup()
   Serial.println("자이로 센서 오프셋 보정 완료!");
 
   lastTime = millis(); // 시간 초기화
+  
+  String ssid = "AIE_509_2.4G";
+  String pwd = "addinedu_class1";
+  String ip = "192.168.0.41";
+  int port = 8888;
 
+  delay(3000);
+  
+  // Wait connecting Wifi
+  connectWifi(ssid, pwd);
+  // Wait connecting Server
+  connectServer(ip, port);
+
+  sendCommandToServer("TL", 3, 0);
+
+  tagList = getTagList();
+  Serial.println(tagList[3]);
+  
   // IR 센서 핀 모드
   pinMode(IR_L, INPUT);
   pinMode(IR_C, INPUT);
@@ -112,16 +179,121 @@ void setup()
   pinMode(GREEN_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
-
+  
   // LED 및 Fuzzer 초기화
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(RED_LED, LOW);
   digitalWrite(BUZZER_PIN, LOW);
+  
 }
 
 void loop()
 {
+  static RobotStatus currentRobotStatus = HOME;
+  static RobotStatus prevRobotStatus = HOME;
+  static Command cmd = NOTTING;
+  static int cntProduct = 0;
+  static int cntOrder = 0;
+  static int cntMask = 0;
+  static uint8_t data[16];
+  static uint8_t order[5];
+  
+  updateYaw();
+  //lineTrace();
+  
+  if (getDataFromServer(data) > 0) {
+    cmd = getCmd(data);
+  } else {
+    cmd = NOTTING;
+  }
 
+  if (cmd == GET_ORDER) {
+    cntOrder = getOrder(data, order);
+    prevRobotStatus = currentRobotStatus;
+    currentRobotStatus = MOVING_TO_SEC;
+  } else if (cmd == RESUME) {
+    if (++cntProduct == cntOrder) {
+      sendCommandToServer("PC", 3, 0x02);
+    } else {
+      RobotStatus temp = prevRobotStatus;
+      prevRobotStatus = currentRobotStatus;
+      currentRobotStatus = temp;
+    }
+  } else if (cmd == MOVE_TO_PP) {
+    prevRobotStatus = currentRobotStatus;
+    currentRobotStatus = MOVING_TO_PP;
+  } else if (cmd == MOVE_TO_HP) {
+    if (prevRobotStatus == MOVING_TO_PP) {
+
+      // 로봇 180도 회전 후 앞으로 조금 이동
+
+    } else {
+      prevRobotStatus = currentRobotStatus;
+      currentRobotStatus = MOVING_TO_HP;
+    }
+  }
+
+  switch (currentRobotStatus) {
+    case STOP:
+      stopMotors();
+      break;
+    case WAIT:
+      stopMotors();
+      break;
+    case GETTING_PRODUCT:
+      stopMotors();
+      break;
+    case MOVING_TO_SEC:
+      if (isTagDetected()) {
+        
+        stopMotors();
+        for (uint8_t i : order) {
+          uint8_t temp[4];
+          temp[3] = (0xFF000000 & tagList[i]) >> 24;
+          temp[2] = (0x00FF0000 & tagList[i]) >> 16;
+          temp[1] = (0x0000FF00 & tagList[i]) >> 8;
+          temp[0] = (0x000000FF & tagList[i]);
+          bool isValid = true;
+          for (int j = 0; j < 4; j++) {
+            if (temp[j] != mfrc522.uid.uidByte[j]) {
+              isValid = false;
+              break;
+            }
+          }
+          if (isValid) {
+            Serial.println("Detected");
+            Serial.print("Order Idx: ");
+            Serial.println(i);
+            prevRobotStatus = currentRobotStatus;
+            currentRobotStatus = GETTING_PRODUCT;
+            sendCommandToServer("PC", 4, 0x00, i);
+            break;
+          }
+        }
+      } else {
+        lineTrace();
+      }
+  }
+  
+
+  /*
+  if (Serial.available() > 0) {
+    char ch = Serial.read();
+    WifiSerial->write(ch);
+  }
+
+  if (WifiSerial->available() > 0) {
+    Serial.write(WifiSerial->read());
+  }
+  */
+  
+  if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
+    for (int i = 0; i < mfrc522.uid.size; i++) {
+      Serial.print(mfrc522.uid.uidByte[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
   
 }
 
@@ -170,13 +342,13 @@ void moveBackward()
 void turnLeft()
 {
   
-  // setMotorSpeed(0, motorSpeed);
+  setMotorSpeed(-motorSpeed, motorSpeed);
   digitalWrite(GREEN_LED, HIGH);
 }
 
 void turnRight()
 {
-  setMotorSpeed(motorSpeed, 0);
+  setMotorSpeed(motorSpeed, -motorSpeed);
   digitalWrite(GREEN_LED, HIGH);
 }
 
@@ -202,19 +374,27 @@ void lineTrace() {
   int leftSensor = digitalRead(IR_L);
   int centerSensor = digitalRead(IR_C);
   int rightSensor = digitalRead(IR_R);
-
-  if (centerSensor == 0) 
-  {  
+  if (isMaskAll()) {
+    Serial.println(++count);
+    if (count == 6) {
+      stopMotors();
+      rotate(180);
+    } else if (count == 7) {
+      stopMotors();
+      rotate(-90);
+    }
+    moveForward();
+    delay(100);
+  } else if (centerSensor && !rightSensor && !leftSensor) {
     moveForward();  // 중앙이 검은색이면 직진
+  } else if (rightSensor && !leftSensor) {
+    turnRight();
+  } else if (leftSensor && !rightSensor) {
+    turnLeft();
   } 
-  else if (leftSensor == 0)
-  {  
-    turnLeft();  // 왼쪽이 검은색이면 좌회전
-  }
-  else if (rightSensor == 0)
-  {  
-    turnRight();  // 오른쪽이 검은색이면 우회전
-  }
+  
+  
+  
 }
 
 // === 초음파 센서 거리 측정 함수 ===
@@ -338,7 +518,7 @@ void rotateToAngle(float targetAngle)
     Serial.print("현재 Yaw: ");
     Serial.print(yaw);
     Serial.print(" | 목표 Yaw: ");
-    Serial.println(targetAngle);
+    Serial.println(initialYaw + targetAngle);
 
     delay(10);
   }
@@ -346,10 +526,176 @@ void rotateToAngle(float targetAngle)
 
 void rotate(float angle)
 {
-  targetYaw += angle; // 목표 각도 갱신
+  targetYaw = angle; // 목표 각도 갱신
   rotateToAngle(targetYaw); // rotateToAngle 함수를 사용하여 목표 각도로 회전
 }
 
+void connectWifi(String ssid, String pwd) {
+  while (1) {
+      if (
+        sendCommandToEsp("AT", "OK", 2000) == STATUS_OK &&
+        sendCommandToEsp("AT+CWMODE=1", "OK", 2000) == STATUS_OK &&
+        sendCommandToEsp("AT+CWJAP=\"" + ssid + "\",\"" + pwd + "\"", "OK", 10000) == STATUS_OK
+      ) {
+        Serial.println("Wifi connect success");
+        return;
+      } else {
+        Serial.println("Wifi connect failed");
+      }
+  }
+}
+
+void connectServer(String ip, int port) {
+  // Server와 연결이 가능한지 확인
+  while (1) {
+    if (sendCommandToEsp("AT+CIPSTART=\"TCP\",\"" + ip + "\"," + String(port), "OK", 5000) == STATUS_OK) {
+      Serial.println("Server connect success");
+      Serial.println();
+      Serial.println("Checking communication available...");
+
+      // 연결 성공 후 통신 가능한지 확인
+      sendCommandToServer("AT", 3, 0);
+    
+      char recvBuffer[16];
+      memset(recvBuffer, 0x00, 16);
+
+      // Server로부터 AT2를 받았는지 확인
+      while (1) {
+        if (getDataFromServer(recvBuffer) > 0) {
+          if (memcmp(recvBuffer, "AT", 2) == 0) {
+            if (recvBuffer[2] == 2) {
+              Serial.println("Can Start Communication With Server!!");
+              return;
+            }
+          }
+        }
+      }
+    } else {
+      Serial.println("Server connect failed");
+    }
+  }
+}
+
+EspStatus sendCommandToEsp(String command, String expected, int timeout) {
+  WifiSerial->println(command); // ESP01에게 명령어 전송
+  long time = millis();
+  while (millis() - time < timeout) { // time limit 설정
+    String response = WifiSerial->readStringUntil('\n');
+    if (response.indexOf(expected) != -1) { // ESP01로부터 수신된게 expected와 같은지 확인
+      return STATUS_OK;
+    }
+  }
+  return STATUS_ERROR;
+}
+
+EspStatus sendCommandToServer(char* cmd, int length, uint8_t status=255, uint32_t data=4294967295) {
+  if (sendCommandToEsp("AT+CIPSEND=" + String(length + 2), ">", 1000) == STATUS_OK) { // ESP01에게 CIPSEND 명령어 전송, ">" 가 회신되면 정상적으로 송신된 거임
+    uint8_t sendBuffer[16];
+    memset(sendBuffer, 0x00, sizeof(sendBuffer));
+    memcpy(sendBuffer, cmd, 2);
+    if (status != 255) { // status 값이 있으면 설정
+      sendBuffer[2] = status;
+    }
+    if (data != 4294967295) { //data 값이 있으면 설정
+      memset(sendBuffer + 3, data, 4);
+    }
+    WifiSerial->write(sendBuffer, length); // 서버에 보내기
+    WifiSerial->println();
+  }
+}
+
+int getDataFromServer(char* buffer) {
+  char recvBuffer[32];
+  int length = 0;
+  memset(recvBuffer, 0x00, 32);
+  memset(buffer, 0x00, 32);
+  
+  int recvSize = 0;
+  // Server로 부터 깔끔하게 값이 수신되지 않아서 Parsing 진행
+  if (WifiSerial->available() > 0){
+      char temp[32] = {0};
+      recvSize = WifiSerial->readBytesUntil('\n', temp, 32); // '\n' 까지 데이터 읽고 size 전달
+      if (recvSize && String(temp).indexOf("+IPD") != -1) { // 수신된 값에서 "+IPD"가 있으면
+        length = recvSize - (String(temp).indexOf(':') + 1) + 1; // Server에서 정확히 송신한 값의 길이
+        temp[recvSize++] = '\n';
+        
+        memcpy(recvBuffer, temp + String(temp).indexOf(':') + 1, length); // 그 길이만큼 recvBuffer에 복사
+      }
+  } else {
+    return 0;
+  }
+  memcpy(buffer, recvBuffer, length);
+  return length;
+}
+
+uint32_t* getTagList() {
+  int count = 0;
+  uint32_t temp[10] = {0};
+
+  char recvBuffer[32];
+  int length = 0;
+  
+  while (1) {
+    if (getDataFromServer(recvBuffer) ==0 ) continue;
+    if (memcmp(recvBuffer, "TL", 2) == 0 && recvBuffer[2] == 0x01) {
+      memcpy(&temp[count], recvBuffer + 3, 4);
+      count++;
+    } else if (memcmp(recvBuffer, "TL", 2) == 0 && recvBuffer[2] == 0x02) {
+      sendCommandToServer("TL", 3, 3);
+      break;
+    }
+  }
+  Serial.println(count);
+  
+  uint32_t* tagList = new uint32_t[count];
+  memcpy(tagList, temp, count*4);
+  return tagList;
+}
+
+Command getCmd(uint8_t* data) {
+  if (memcmp(data, "OD", 2) == 0) {
+    return GET_ORDER;
+  }
+  if (memcmp(data, "PC", 2) == 0 && data[2] == 0x01) {
+    return RESUME;
+  }
+  if (memcmp(data, "MV", 2) == 0) {
+    if (data[2] == 0x00) return MOVE_TO_PP;
+    if (data[2] == 0x02) return MOVE_TO_HP;
+  }
+}
+
+int getOrder(uint8_t* data, uint8_t* order) {
+  int size = 0;
+  uint8_t temp[5] = {0};
+  while (1) {
+    if (memcmp(data, "OD", 2) == 0 && data[2] == 0x01) break;
+
+    if (memcmp(data, "OD", 2) == 0 && data[2] == 0x00) {
+      temp[size++] = data[3];
+    }
+    getDataFromServer(data);
+  }
+  Serial.println(size);
+  memcpy(order, temp, size);
+  return size;
+}
+
+bool isTagDetected() {
+  return mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial();
+}
+
+bool isMaskAll() {
+  static bool prevMask = false;
+  bool mask = ((digitalRead(IR_L) && digitalRead(IR_R) && digitalRead(IR_C)));
+  if (!prevMask && mask) {
+    prevMask = true;
+    return true;
+  } else if (!mask && prevMask) {
+    prevMask = false;
+  }
+  return false;
+}
 
 
 // Test code
