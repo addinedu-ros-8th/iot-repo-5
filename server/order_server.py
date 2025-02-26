@@ -328,6 +328,19 @@ def processCommand(socket, data):
             server.sendData(socket, data)
 
             return
+    elif command == "RS":
+        status == data["status"]
+        if status == 0x00:
+            result = fetchRobot(1)
+
+            print(result)
+
+def fetchRobot(self, id):
+    sql = "select section, status from robot where id = %s"
+    result = conn.fetch_one(sql, (id,))
+
+    return result[0]
+
         
 def updateProductInfo(product_id, category, price):
     try:
