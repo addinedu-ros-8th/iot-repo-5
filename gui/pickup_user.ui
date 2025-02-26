@@ -473,6 +473,22 @@
     </widget>
    </widget>
   </widget>
+  <widget class="QPushButton" name="btnPickup">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>360</x>
+     <y>60</y>
+     <width>101</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>상품 수령</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
