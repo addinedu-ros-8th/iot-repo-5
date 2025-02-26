@@ -132,6 +132,8 @@ class Server(QTcpServer):
 
                         data = struct.pack("<2sBc", command.encode(), 0x01, b'\n')
                         self.sendData(self.client_list[0], data)
+                    elif status == 0x02:
+                        data = {"command":"RS", "status":0x00}
 
     def socketDelay(self, socket, data, isOrder=0):
         self.sendData(socket, data, isOrder)
