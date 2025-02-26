@@ -120,7 +120,7 @@ void parse(char* data){
   }
 }
 
-void rotateMotor(uint8_t id_, uint8_t quantity_)
+void rotateMotor(uint8_t motorIndex, uint8_t quantity_)
 {
   const char* motorNames[] = { "1st", "2nd", "3rd", "4th" };
 
@@ -128,14 +128,14 @@ void rotateMotor(uint8_t id_, uint8_t quantity_)
     Serial.println("Error: Quantity cannot be negative!");
     return;
   }
-  int motorIndex = id_ - 1;  // 배열 인덱스로 변환 (1~4 → 0~3)
+    
   Serial.print(motorNames[motorIndex]);
   Serial.println(" motor's rotated!");
 
   stepperMotors[motorIndex].setSpeed(10);  // 속도를 10 RPM으로 설정
 
   // 모터 회전 실행 (너무 크지 않게 조정)
-  stepperMotors[motorIndex].step(lap * quantity_ );
+  stepperMotors[motorIndex].step(lap * (quantity_ *2) );
  
   const uint8_t message[] = { 'P', 'C', 1 };  
   client.write(message, sizeof(message));
