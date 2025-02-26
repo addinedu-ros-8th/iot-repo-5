@@ -21,15 +21,22 @@ class pickup_database:
             return
         
         cursor = self.conn.cursor()
-        try:
-            cursor.execute(query, param)
+        cursor.execute(query, param)
 
-            self.conn.commit()
-        except Exception as e:
-            print("failed excute query...", e)
+        id = cursor.lastrowid
+
+        cursor.close()
+
+        return id
+    
+    def execute_many(self, query, param=None):
+        if not self.conn.is_connected():
+            print("not connected db...")
             return
-        finally:
-            cursor.close()
+        
+        cursor = self.conn.cursor(prepared=True)
+        cursor.executemany(query, param)
+        cursor.close()
 
         return True
 
@@ -64,9 +71,12 @@ class pickup_database:
             return result
         except Exception as e:
             print("failed fetch...", e)
-            return
+            return None
         finally:
             cursor.close()
+
+    def commit(self):
+        self.conn.commit()
 
     def rollback(self):
         self.conn.rollback()
