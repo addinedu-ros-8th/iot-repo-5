@@ -16,7 +16,8 @@ class Client(QTcpSocket):
     def __init__(self):
         super(Client, self).__init__()
 
-        #self.connected.connect(self.on_connected)
+        self.errorOccurred.connect(self.on_errorOccurred)
+        self.connected.connect(self.on_connected)
         self.readyRead.connect(self.receiveData)
         #self.send_data.connect(self.sendData)
 
@@ -30,6 +31,12 @@ class Client(QTcpSocket):
         if self.state() == QTcpSocket.ConnectedState:
             data = json.dumps(message, default=str)
             self.write(data.encode('utf-8'))
+
+    def on_connected(self):
+        self.receive_data.emit({"command":"CON"})
+
+    def on_errorOccurred(self):
+        self.receive_data.emit({"command":"FAIL"})
 
 class AddProductWindow(QDialog):
     def __init__(self, socket):
@@ -155,10 +162,16 @@ class WindowClass(QMainWindow, from_class):
         self.btnAddSection.clicked.connect(self.addSection)
         self.btnModifyProduct.clicked.connect(self.modifyProduct)
 
+        self.socket.sendData({"command":"RS", "status":0x00})
+
     def receiveData(self, data):
         command = data["command"]
 
-        if command == "LI":
+        if command == "CON":
+            self.groupBox.setEnabled(True)
+        elif command == "FAIL":
+            QMessageBox.warning(self, "Error...", "서버 연결 실패")
+        elif command == "LI":
             status = data["status"]
 
             if status == 0x02:
@@ -176,6 +189,7 @@ class WindowClass(QMainWindow, from_class):
                 self.login_id = self.editID.text()
                 self.name = data["name"]
                 self.user_id = data["user_id"]
+                self.groupBox_2.setEanbled(True)
 
                 self.socket.sendData({"command":"IN"})
         elif command == "AP":
