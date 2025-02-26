@@ -109,7 +109,7 @@ void parse(char* data){
       Serial.print("Quantity: ");
       Serial.println(quantity);
 
-      if (motorID >= 1 && motorID <= 4 && status == 0) {
+      if (motorID >= 0 && motorID <= 3 && status == 0) {
         rotateMotor(motorID, quantity);
       } 
       else {
