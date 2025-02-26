@@ -92,7 +92,7 @@ mp4 - video
 #### 1) SW
 ![Image](https://github.com/user-attachments/assets/b98fc788-4aed-4bea-b0fc-99615b5b7f76)
 #### 2) HW
-![Image](https://github.com/user-attachments/assets/5ea9f2f4-b5dd-4a12-a072-1b8e093264f8)
+![Image](https://github.com/user-attachments/assets/c7836776-bb2d-485c-aa48-a33e4f9dbe51)
 
 ### DB 
 ![Image](https://github.com/user-attachments/assets/db91dcca-73be-405f-91e4-150dc0bc62d5)
