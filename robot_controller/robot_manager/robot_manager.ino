@@ -10,8 +10,8 @@ const int IR_C = A2;  // 가운데 IR 센서
 const int IR_R = A3;  // 오른쪽 IR 센서
 
 // 모터 드라이버 핀 설정 (L9110S 기준)
-const int MOTOR_R_IN1 = 5;   // 오른쪽 모터 방향 1 HIGH 시 전진
-const int MOTOR_R_IN2 = 6;   // 오른쪽 모터 방향 2 HIGH 시 후진
+const int MOTOR_R_IN1 = 6;   // 오른쪽 모터 방향 1 HIGH 시 전진
+const int MOTOR_R_IN2 = 5;   // 오른쪽 모터 방향 2 HIGH 시 후진
 
 const int MOTOR_L_IN3 = 10;  // 왼쪽 모터 방향 1 HIGH 시 후진
 const int MOTOR_L_IN4 = 11;  // 왼쪽 모터 방향 2 HIGH 시 전진
@@ -116,6 +116,8 @@ bool isMaskAll();
 
 int cntMask = 0;
 
+bool prevDetected = false;
+
 void setup()
 {
   Serial.begin(115200);
@@ -138,7 +140,7 @@ void setup()
 
   // 초기 오프셋 측정 (센서를 고정한 상태에서 실행)
   Serial.println("자이로 센서 오프셋 보정 중... 3초간 가만히 두세요.");
-  delay(3000);
+  delay(1000);
   calibrateGyroZ();
   Serial.println("자이로 센서 오프셋 보정 완료!");
 
@@ -148,8 +150,8 @@ void setup()
   String pwd = "addinedu_class1";
   String ip = "192.168.0.41";
   int port = 8888;
-
-  delay(3000);
+  
+  delay(1000);
   
   // Wait connecting Wifi
   connectWifi(ssid, pwd);
@@ -159,7 +161,11 @@ void setup()
   sendCommandToServer("TL", 3, 0);
 
   tagList = getTagList();
-  Serial.println(tagList[3]);
+  for (int j = 0; j < 4; j++) {
+    Serial.print(tagList[j], HEX);
+    Serial.println();
+  }
+  
   
   // IR 센서 핀 모드
   pinMode(IR_L, INPUT);
@@ -200,10 +206,12 @@ void loop()
   static int cntOrder = 0;
   static uint8_t data[16];
   static uint8_t order[5];
+  static bool* recvOrder;
   
-  updateYaw();
+  //updateYaw();
   //lineTrace();
-
+  //moveForward();
+  /*
   if (Serial.available() > 0) {
     String str = Serial.readStringUntil('\n');
     WifiSerial->println(str);
@@ -212,7 +220,7 @@ void loop()
   if (WifiSerial->available() > 0) {
     Serial.println(WifiSerial->readStringUntil('\n'));
   }
-  
+  */
   if (getDataFromServer(data) > 0) {
     cmd = getCmd(data);
   } else {
@@ -221,9 +229,21 @@ void loop()
   
   if (cmd == GET_ORDER) {
     cntOrder = getOrder(data, order);
+    recvOrder = new bool[cntOrder];
+    memset(recvOrder, false, cntOrder);
     prevRobotStatus = currentRobotStatus;
     currentRobotStatus = MOVING_TO_SEC;
+    if (cntOrder > 0) {
+      Serial.print("Order List: ");
+      for (int i = 0; i < cntOrder; i++) {
+        Serial.print(order[i]);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+    Serial.println("GO!!");
   } else if (cmd == RESUME) {
+    Serial.println("RESUME");
     if (++cntProduct == cntOrder) {
       sendCommandToServer("PC", 3, 0x02);
     } else {
@@ -254,32 +274,39 @@ void loop()
       break;
     case MOVING_TO_SEC:
       if (isTagDetected()) {
-        
-        stopMotors();
-        for (uint8_t i : order) {
-          uint8_t temp[4];
-          temp[3] = (0xFF000000 & tagList[i]) >> 24;
-          temp[2] = (0x00FF0000 & tagList[i]) >> 16;
-          temp[1] = (0x0000FF00 & tagList[i]) >> 8;
-          temp[0] = (0x000000FF & tagList[i]);
-          bool isValid = true;
-          for (int j = 0; j < 4; j++) {
-            if (temp[j] != mfrc522.uid.uidByte[j]) {
-              isValid = false;
+        if (!prevDetected) {
+          prevDetected = true;
+          
+          stopMotors();
+          for (int i = 0; i < cntOrder; i++) {
+            if (recvOrder[i] == true) continue;
+            uint8_t temp[4] = {0};
+            temp[3] = (tagList[order[i]] >> 24) & 0xFF;
+            temp[2] = (tagList[order[i]] >> 16) & 0xFF;
+            temp[1] = (tagList[order[i]] >> 8) & 0xFF;
+            temp[0] = tagList[order[i]] & 0xFF;
+            bool isValid = true;
+            for (int j = 0; j < 4; j++) {
+              if (temp[j] != mfrc522.uid.uidByte[j]) {
+                isValid = false;
+                moveForward();
+                return;
+              }
+            }
+            if (isValid == true) {
+              recvOrder[i] = true;
+              Serial.println("Detected");
+              Serial.print("Order Idx: ");
+              Serial.println(order[i]);
+              prevRobotStatus = currentRobotStatus;
+              currentRobotStatus = GETTING_PRODUCT;
+              while (sendCommandToServer("PC", 4, 0x00, order[i]) == STATUS_NO);
               break;
             }
           }
-          if (isValid) {
-            Serial.println("Detected");
-            Serial.print("Order Idx: ");
-            Serial.println(i);
-            prevRobotStatus = currentRobotStatus;
-            currentRobotStatus = GETTING_PRODUCT;
-            while (sendCommandToServer("PC", 4, 0x00, i) == STATUS_NO);
-            break;
-          }
         }
       } else {
+        prevDetected = false;
         lineTrace();
       }
       break;
@@ -291,15 +318,43 @@ void loop()
           stopMotors();
           sendCommandToServer("MV", 3, 0x01);
           cntMask = 0;
+          currentRobotStatus = WAIT;
         }
       } else {
         lineTrace();
       }
-
+      break;
+    case MOVING_TO_HP:
+      rotate(180);
+      moveForward();
+      delay(100);
+      stopMotors();
+      if (isMaskAll()) {
+        Serial.print("cntMask: ");
+        Serial.println(++cntMask);
+        if (cntMask == 1) {
+          stopMotors();
+          rotate(-90);
+          moveForward();
+          delay(100);
+          stopMotors();
+        } else if (cntMask == 2) {
+          stopMotors();
+          rotate(-90);
+          moveForward();
+          delay(100);
+          stopMotors();
+          sendCommandToServer("MV", 3, 0x03);
+          cntMask = 0;
+          delete [] recvOrder;
+          prevRobotStatus = currentRobotStatus;
+          currentRobotStatus = STOP;
+        }
+      } else {
+        lineTrace();
+      }
+      break;
   }
-  
-
-  
   
  
   /*
@@ -691,12 +746,6 @@ int getOrder(uint8_t* data, uint8_t* order) {
     getDataFromServer(data);
     delay(500);
   }
-  Serial.print("Order List: ");
-  for (int i = 0; i < size; i++) {
-    Serial.print(temp[i]);
-    Serial.print(" ");
-  }
-  Serial.println();
   memcpy(order, temp, size);
   return size;
 }
