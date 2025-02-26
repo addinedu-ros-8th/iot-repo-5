@@ -2,11 +2,18 @@ import sys
 import json
 import struct
 import time
+import traceback
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
 from PyQt5.QtCore import QCoreApplication, QTimer
 from PyQt5.QtNetwork import QTcpServer, QHostAddress, QTcpSocket
+from enum import Enum
+
+class Client(Enum):
+    ROBOT = 0
+    VENDING_MACHINE = 1
+    ORDER_SERVER = 3
 
 class Server(QTcpServer):
     def __init__(self):
@@ -15,6 +22,7 @@ class Server(QTcpServer):
         self.client_list = {}
         self.order_list = {}
         self.port = 8888
+        self.group_id = -1
 
     def incomingConnection(self, handle):
         client_socket = QTcpSocket(self)
@@ -43,55 +51,73 @@ class Server(QTcpServer):
                 command = data[:2].decode()
                 status = data[2]
                 if command == 'AT':
+                    if status in self.client_list:
+                        print("already")
+                        del self.client_list[status]
+
                     self.client_list[status] = client_socket
-                    if status == 0:
+                    if status == Client.ROBOT.value:
                         print("Robot Connection")
-                    elif status == 1:
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 연결"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                    elif status == Client.VENDING_MACHINE.value:
                         print("Vending Machine")
-                    elif status == 3:
-                        print("Order Server")
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"자판기 로봇 연결"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
                     
-                    status = 0x02
-                    self.sendData(client_socket, struct.pack("<2sBc", command.encode(), status, b'\n'))
+                    time.sleep(1)
+                    self.sendData(client_socket, struct.pack("<2sBc", command.encode(), 0x02, b'\n'))
+                    return
                 elif command == "TL":
                     if status == 0x00:
                         data = {"command":"TL", "status":0x00}
-                        self.sendData(self.client_list[3], data, 1)
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 SECTION LIST 요청"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        return
                     elif status == 0x03:
-                        index_list = [1, 2]
-                        #self.order_list[1] = 1
-                        #self.order_list[2] = 2
-
-                        #for index in index_list:
-                        #    data = struct.pack("<2sBBc", "OD".encode(), 0x00, index, b'\n')
-                        #    server.sendData(server.client_list[0], data)
-                        #    time.sleep(0.5)
-
-                        #time.sleep(1)
-                        #data = struct.pack("<2sBc", "OD".encode(), 0x01, b'\n')
-                        #server.sendData(server.client_list[0], data)
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 SECTION LIST 수신 완료"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        return
                 elif command == "PC":
                     if status == 0x00:
                         section_id = int(data[3])
-                        print(section_id)
-                        #self.order_list[1] = 1
-                        #self.order_list[2] = 2
                         quantity = self.order_list[section_id]
                         
                         data = struct.pack("<2sBBBc", command.encode(), status, section_id, quantity, b'\n')
-                        self.sendData(self.client_list[1], data)
-                        #time.sleep(0.5)
-                        #data = struct.pack("<2sBc", command.encode(), 0x01, b'\n')
-                        #self.sendData(self.client_list[0], data)
+                        self.sendData(self.client_list[Client.VENDING_MACHINE.value], data)
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 상품 적재 요청"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        return
                     elif status == 0x01:
                         struct.pack("<2sBc", command.encode(), status, b'\n')
-                        self.sendData(self.client_list[0], data)
+                        self.sendData(self.client_list[Client.ROBOT.value], data)
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"자판기 로봇 상품 적재 완료"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        return
                     elif status == 0x02:
                         data = struct.pack("<2sBc", "MV".encode(), 0x00, b'\n')
-                        self.sendData(self.client_list[0], data)
+                        self.sendData(self.client_list[Client.ROBOT.value], data)
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 모든 상품 적재 완료"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        return
                 elif command == "MV":
                     if status == 0x01:
                         print("픽업 스테이션 도착")
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 픽업 스테이션 도착"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+
+                        data = {"command":"PU", "status":0x00, "group_id":self.group_id}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                    elif status == 0x03:
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 홈 스테이션 도착"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                        self.group_id = 0
             else:
                 command = data["command"]
                 status = data["status"]
@@ -104,36 +130,45 @@ class Server(QTcpServer):
                         "status" : 0x02
                     }
                     self.sendData(client_socket, data, 1)
+
+                    time.sleep(0.5)
+                    data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"주문 서버 연결"}
+                    self.sendData(client_socket, data, 1)
                     return
-                
-                
                 if command == "TL":
-                    robot_socket = self.client_list[0]
+                    robot_socket = self.client_list[Client.ROBOT.value]
                     uids = [tuple(item) for item in data["data"]]
                     
                     for uid in uids:
                         data = struct.pack("<2sBBBBBc", command.encode(), status, *uid, b'\n')
                         self.sendData(robot_socket, data)
-                        time.sleep(0.1)
+                        time.sleep(0.5)
 
                     data = struct.pack("<2sBc", command.encode(), 0x02, b'\n')
-                    QTimer.singleShot(500, lambda:self.socketDelay(robot_socket, data))
+                    self.sendData(robot_socket, data)
+                    #QTimer.singleShot(500, lambda:self.socketDelay(robot_socket, data))
+
+                    data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇에 SECTION LIST 전송"}
+                    self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
                 elif command == "OD":
                     status = data["status"]
                     if status == 0x00:
+                        self.group_id = data["group_id"]
                         self.order_list = {}
                         for i in range(len(data["section_list"])):
                             self.order_list[data["section_list"][i]] = data["quantity_list"][i]
 
                         for section_id, quantity in self.order_list.items():
                             data = struct.pack("<2sBBc", command.encode(), status, section_id, b'\n')
-                            self.sendData(self.client_list[0], data)
-                            time.sleep(0.1)
+                            print(data)
+                            self.sendData(self.client_list[Client.ROBOT.value], data)
+                            time.sleep(1)
 
                         data = struct.pack("<2sBc", command.encode(), 0x01, b'\n')
-                        self.sendData(self.client_list[0], data)
-                    elif status == 0x02:
-                        data = {"command":"RS", "status":0x00}
+                        self.sendData(self.client_list[Client.ROBOT.value], data)
+
+                        data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇에 주문정보 전송"}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
 
     def socketDelay(self, socket, data, isOrder=0):
         self.sendData(socket, data, isOrder)
@@ -146,13 +181,16 @@ class Server(QTcpServer):
         if isOrder == 0:
             if client_socket.state() == QTcpSocket.ConnectedState:
                 client_socket.write(message)
-                client_socket.flush()
+                #client_socket.flush()
                 client_socket.waitForBytesWritten()
         else:
             if client_socket.state() == QTcpSocket.ConnectedState:
                 client_socket.write(json.dumps(message, default=str).encode('utf-8'))
-                client_socket.flush()
+                #client_socket.flush()
                 client_socket.waitForBytesWritten()
+        
+    def sendLog(self, socket, data):
+        self.sendData(socket, data)
 
 def processCommand():
     while True:
@@ -203,6 +241,14 @@ def processCommand():
             data = struct.pack("<2sBc", "MV".encode(), 0x00, b'\n')
             server.sendData(server.client_list[0], data)
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    #if issubclass(exc_type, KeyboardInterrupt):
+    #    print("\n프로그램을 종료합니다.")
+    #    sys.exit(0)
+    print("예외가 발생했습니다:")
+    traceback.print_exception(exc_type, exc_value, exc_traceback)
+
+sys.excepthook = handle_exception
 
 if __name__ == "__main__":
     app = QCoreApplication(sys.argv)
@@ -214,6 +260,8 @@ if __name__ == "__main__":
         print("Failed listen on port", server.port)
 
     processCommand()
+
+    
 
     server.close()
     app.quit()

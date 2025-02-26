@@ -117,6 +117,8 @@ class WindowClass(QMainWindow, from_class):
         self.setHeaderSisze()
         sys.excepthook = self.handle_exception
 
+        self.socket.sendData({"command":"PU", "status":0x00})
+
     def showRegistWindow(self):
         self.windows = RegistWindow(self.socket)
         self.windows.show()
@@ -261,6 +263,10 @@ class WindowClass(QMainWindow, from_class):
                         text = "픽업요청"
                     self.tbOrderList.setItem(row, 3, QTableWidgetItem(text))
                     self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(date).split(" ")[0]))
+        elif command == "PU":
+            if data["status"] == 0x01:
+                QMessageBox.information(self, "Alaram...", "상품이 준비되었습니다. 픽업을 위해 매장에 방문 바랍니다.")
+
 
     def checkout(self):
         row = self.tbShoppingCart.rowCount()

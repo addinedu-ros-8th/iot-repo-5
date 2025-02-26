@@ -189,7 +189,7 @@ class WindowClass(QMainWindow, from_class):
                 self.login_id = self.editID.text()
                 self.name = data["name"]
                 self.user_id = data["user_id"]
-                self.groupBox_2.setEanbled(True)
+                self.groupBox_2.setEnabled(True)
 
                 self.socket.sendData({"command":"IN"})
         elif command == "AP":
@@ -232,6 +232,8 @@ class WindowClass(QMainWindow, from_class):
                 self.tbOrder.setItem(row, 1, QTableWidgetItem(items[1]))
                 self.tbOrder.setItem(row, 2, QTableWidgetItem(items[2]))
                 self.tbOrder.setItem(row, 3, QTableWidgetItem(str(items[3])))
+
+            self.socket.sendData({"command":"LOG","status":0x00})
         elif command == "OL":
             for items in data["data"]:
                 row = self.tbOrderList.rowCount()
@@ -256,6 +258,15 @@ class WindowClass(QMainWindow, from_class):
                     text = "픽업요청"
                 self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(text)))
                 self.tbOrderList.setItem(row, 5, QTableWidgetItem(str(date).split(" ")[0]))
+        elif command == "LOG":
+            status = data["status"]
+            if status == 0x00:
+                for items in data["data"]:
+                    row = self.tbLog.rowCount()
+                    self.tbLog.insertRow(row)
+
+                    for idx, item in enumerate(items):
+                        self.tbLog.setItem(row, idx, QTableWidgetItem(str(item)))
 
     def modifyProduct(self):
         self.product_modify = ModifyProduct(self.socket)

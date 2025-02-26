@@ -1,10 +1,8 @@
-
 #include <SoftwareSerial.h>
 #include <SparkFunESP8266WiFi.h>
 #include <Stepper.h>
 
 #define lap 2048
-
 const char mySSID[] = "AIE_509_2.4G";
 const char myPSK[] = "addinedu_class1";
 const char server[] = "192.168.0.41";
@@ -13,14 +11,14 @@ const int serverPort = 8888;  // 서버 포트
 ESP8266Client client;
 
 unsigned long lastReceiveTime = 0; // 마지막 데이터 수신 시간
-const unsigned long receiveInterval = 2000; // 2초마다 서버 체크
+const unsigned long interval = 2000; // 2초마다 서버 체크
 bool serverOk = false;  
 
 Stepper stepperMotors[4] = {  
-  Stepper(lap, 10, 11, 12, 13),
-  Stepper(lap, 4, 5, 6, 7),
-  Stepper(lap, A0,A1,2,3),
-  Stepper(lap, A2, A3, A4, A5) 
+  Stepper(lap, A2,A3,A4,A5),
+  Stepper(lap, A0, A1, 2, 3),
+  Stepper(lap, 4,5, 6, 7),
+  Stepper(lap, 10, 11, 12, 13) 
 }; 
 
 void connectWifi(){
@@ -30,10 +28,8 @@ void connectWifi(){
 	  delay(1000);
   }
   
-  if (esp8266.status() <= 0)
-  {
-    while (esp8266.connect(mySSID, myPSK) < 0)
-      delay(1000);
+  if (esp8266.status() <= 0){
+    while (esp8266.connect(mySSID, myPSK) < 0) delay(1000);
   }
   delay(1000);
   Serial.println("WiFi 연결 완료!\n"); 
@@ -76,8 +72,6 @@ void receiveFromServer()
       Serial.println("No valid data found");
       return;
     }
-  
-    
   }  
 }
 
@@ -128,31 +122,27 @@ void rotateMotor(uint8_t motorIndex, uint8_t quantity_)
     Serial.println("Error: Quantity cannot be negative!");
     return;
   }
-    
+  
   Serial.print(motorNames[motorIndex]);
   Serial.println(" motor's rotated!");
 
   stepperMotors[motorIndex].setSpeed(10);  // 속도를 10 RPM으로 설정
 
   // 모터 회전 실행 (너무 크지 않게 조정)
-  stepperMotors[motorIndex].step(lap * (quantity_ *2) );
+  stepperMotors[motorIndex].step(lap *quantity_ );
  
   const uint8_t message[] = { 'P', 'C', 1 };  
   client.write(message, sizeof(message));
 }
-void setup() 
-{
+
+void setup() {
   Serial.begin(9600);
   connectWifi();
-
   connectServer();
 }
-
-void loop() 
-{
- 
+void loop() {
   unsigned long currentMillis = millis();
-  if (currentMillis - lastReceiveTime >= receiveInterval) {
+  if (currentMillis - lastReceiveTime >= interval) {
     lastReceiveTime = currentMillis;
     receiveFromServer();
   }
