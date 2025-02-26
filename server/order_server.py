@@ -22,7 +22,11 @@ class Client(QTcpSocket):
         while self.bytesAvailable() > 0:
             data = self.readAll().data().decode('utf-8')
 
-            self.receive_data.emit(json.loads(data))
+            try:
+                self.receive_data.emit(json.loads(data))
+            except:
+                # json 데이터가 아닐경우 패스
+                pass
 
     def sendData(self, message):
         if self.state() == QTcpSocket.ConnectedState:
@@ -99,6 +103,7 @@ class RobotControlThread(QThread):
             """
             result = self.conn.fetch_all(sql, (group_id[0],))
             
+            #print(result)
             if result is not None:
                 section_list = []
                 product_list = []
@@ -109,8 +114,8 @@ class RobotControlThread(QThread):
                     quantity_list.append(item[4])
 
                 data = {
-                    "user_id" : result[0],
-                    "group_id" : result[1],
+                    "user_id" : result[0][0],
+                    "group_id" : result[0][1],
                     "section_list" : section_list,
                     "product_list" : product_list,
                     "quantity_list" : quantity_list
@@ -174,7 +179,7 @@ def processCommand(socket, data):
 
             data = {"command" : "AP", "status" : status}
             server.sendData(socket, data)
-            writeLog("상품", "새 상품 추가 : [" + name + "(" + category + "), " + quantity + "개, " + price + "원, " + uid + "]")
+            writeLog("상품", "새 상품 추가 : [" + name + "(" + category + "), " + str(quantity) + "개, " + str(price) + "원, " + uid + "]")
     elif command == "MP":
         status = data["status"]
         if status == 0x00:
@@ -208,7 +213,7 @@ def processCommand(socket, data):
                 "status" : status,
             }
             server.sendData(socket, data)
-            writeLog("상품", "상품 수정 : [" + product_name + "(" + category + "), " + price + "원]")
+            writeLog("상품", "상품 수정 : [" + product_name + "(" + category + "), " + str(price) + "원]")
     elif command == "REG":
         if data["status"] == 0x00:
             name = data["name"]
@@ -222,7 +227,7 @@ def processCommand(socket, data):
                 "status" : status
             }
             server.sendData(socket, data)
-            writeLog("회원", name + "(" + id + ")님 신규 회원 가입")
+            writeLog("회원", name + "(" + str(id) + ")님 신규 회원 가입")
     elif command == "IN":
         result = productListQuery()
         data = {
@@ -249,7 +254,7 @@ def processCommand(socket, data):
                 "status" : status,
             }
             server.sendData(socket, data)
-            writeLog("장바구니", "장바구니 추가(유저ID : " + user_id + ", 상품ID : " + product_id + ", 수량 : " + quantity + ")")
+            writeLog("장바구니", "장바구니 추가(유저ID : " + str(user_id) + ", 상품ID : " + str(product_id) + ", 수량 : " + str(quantity) + ")")
             return
         elif status == 0x03:
             # 장바구니 목록 요청
@@ -277,7 +282,7 @@ def processCommand(socket, data):
             }
 
             server.sendData(socket, data)
-            writeLog("장바구니", "장바구니 수정(유저ID : " + user_id + ", 카트ID : " + cart_id + ", 수량 : " + quantity + ")")
+            writeLog("장바구니", "장바구니 수정(유저ID : " + str(user_id) + ", 카트ID : " + str(cart_id) + ", 수량 : " + str(quantity) + ")")
             return
         elif status == 0x06:
             # 장바구니 상품 삭제
@@ -291,7 +296,7 @@ def processCommand(socket, data):
                 "status" : status
             }
             server.sendData(socket, data)
-            writeLog("장바구니", "장바구니 상품 삭제(유저ID : + " + user_id + ", 카트ID : " + cart_id  + ")")
+            writeLog("장바구니", "장바구니 상품 삭제(유저ID : + " + str(user_id) + ", 카트ID : " + str(cart_id)  + ")")
             return
     elif command == "CO":
         status = data["status"]
@@ -308,7 +313,7 @@ def processCommand(socket, data):
             }
             server.sendData(socket, data)
 
-            writeLog("장바구니", "장바구니 결제(유저ID : + " + user_id + ", 카트ID : " + cart_id  + ")")
+            writeLog(f"장바구니", "장바구니 결제(유저ID : {user_id}, 카트ID : {cart_id})")
             
             if not robotThread.isRunning():
                 robotThread.start()
@@ -655,6 +660,15 @@ def fetchSection():
         data.append(hex_value)
 
     return data
+
+def test():
+    sql = "delete from `order`"
+    conn.execute_query(sql)
+
+    sql = "delete from order_group"
+    conn.execute_query(sql)
+
+    conn.commit()
         
 process_group_id = -1
 
@@ -686,6 +700,8 @@ if __name__ == "__main__":
     logoutQuery()
 
     processInput()
+
+    test()
 
     server.close()
     app.quit()
