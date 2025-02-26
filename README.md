@@ -4,7 +4,7 @@ IOT 프로젝트 5조 저장소. 팀 통신보안
 <br />
 <p align="center">
   <a href="https://github.com/addinedu-ros-8th/iot-repo-5">
-    <img src="https://github.com/addinedu-ros-8th/eda-repo-3/blob/main/flowermen.jpg" alt="Logo" width="500px">
+    <img src="https://github.com/addinedu-ros-8th/iot-repo-5/blob/main/frontImg.webp" alt="Logo" width="500px">
   </a>
 
   <h3 align="center">무인매장 자동화 시스템(Unmanned Store Automation System)</h3>
@@ -84,15 +84,28 @@ mp4 - video
 ## Design
 
 ### Scenario
-
+![Image](https://github.com/user-attachments/assets/17a16a77-4d31-4067-933d-dc08dc03aeae)
 ### Structure 
 
 ### Architecture  
+#### SW
+![Image](https://github.com/user-attachments/assets/a2228d6d-e6c4-48aa-936c-80c851946586)
 
-### ERD 
-![Image](https://github.com/user-attachments/assets/e1687e57-f188-4126-9fd4-11200557cc1e)
+#### HW
+![Image](https://github.com/user-attachments/assets/6f38a9c4-d1d4-4ffb-ac80-f4be5c4e6796)
+
+### DB 
+<img width="880" alt="Image" src="https://github.com/user-attachments/assets/840c1adc-654b-4ff1-8140-f7beb26c61c8" />
+
 ### Fuction 
 #### Server
+|  기능  | 설명 |
+|--------|------|-----|
+| leader | 이태민 |  로봇 SW|   
+| worker | 강주빈 |  로봇 SW, 기구 및 트랙 설계 |   
+| worker | 신동철 |  사용자/관리자 GUI, DB 구축, 로봇 및 진열대 설계|    
+| worker | 황한문 |  진열대-로봇 통신, github 관리, 서포트|    
+
 #### Client   
 #### Controller    
 
