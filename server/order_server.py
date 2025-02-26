@@ -31,11 +31,11 @@ class Client(QTcpSocket):
             self.flush()
 
 class Server(QTcpServer):
-    client_list = {}
     port = 8889
     receive_data = pyqtSignal(QTcpSocket, dict)
 
     def __init__(self):
+        self.client_list = {}
         super(Server, self).__init__()
 
     def incomingConnection(self, handle):
@@ -133,13 +133,13 @@ def sendOrderList(data):
     data = {
         "command" : "OD",
         "status" : 0x00,
+        "group_id" : group_id,
         "section_list" : section_list,
         "quantity_list" : quantity_list
     }
     client.sendData(data)
 
-    #client.sendData({"command":"OD", "status":0x00, "section_id":section_id})
-
+    updateOrderStatus(group_id, 1)
 
 def processCommand(socket, data):
     command = data["command"]
@@ -149,18 +149,15 @@ def processCommand(socket, data):
         login_id = data["login_id"]
         pw = data["pw"]
         result = loginQuery(login_id, pw)
+
+        if result["status"] == 1:
+            server.client_list[login_id] = socket
         
         data = {"command" : "LI"}
         data.update(result)
         
         server.sendData(socket, data)
-
         return
-    elif command == "LOG":
-        log_type = data["type"]
-        message = data["message"]
-
-        writeLog(log_type, message)
     elif command == "LO":
         logoutQuery(data['id'])
 
@@ -310,6 +307,8 @@ def processCommand(socket, data):
                 "status" : status
             }
             server.sendData(socket, data)
+
+            writeLog("장바구니", "장바구니 결제(유저ID : + " + user_id + ", 카트ID : " + cart_id  + ")")
             
             if not robotThread.isRunning():
                 robotThread.start()
@@ -328,12 +327,35 @@ def processCommand(socket, data):
             server.sendData(socket, data)
 
             return
+    elif command == "LOG":
+        status = data["status"]
+        if status == 0x00:
+            result = fetchLog()
+
+            data = {"command":"LOG","status":status,"data":result}
+            server.sendData(socket, data)
+        elif status == 0x01:
+            log_type = data["type"]
+            message = data["message"]
+
+            writeLog(log_type, message)
     elif command == "RS":
-        status == data["status"]
+        status = data["status"]
         if status == 0x00:
             result = fetchRobot(1)
 
             print(result)
+        elif status == 0x01:
+            section = data["section"]
+            status = data["status"]
+
+            updateRobot(1, section, status)
+
+def fetchPickup(user_id):
+    sql = "selct id from order_group where user_id = %s and status = 1"
+    group_id = conn.fetch_one(sql, (user_id,))
+
+    return group_id[0]
 
 def fetchRobot(self, id):
     sql = "select section, status from robot where id = %s"
@@ -341,11 +363,27 @@ def fetchRobot(self, id):
 
     return result[0]
 
+def updateRobot(id, section, status):
+    try:
+        sql = "update robot set section = %s, status = %s where id = %s"
+        conn.execute_query(sql, section, status)
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print("Error Update Robot Status :", e)
+
+        return 0x07
+    
+    return 0x01
+
         
 def updateProductInfo(product_id, category, price):
     try:
         sql = "update products set price = %s, category = %s where id = %s"
         conn.execute_query(sql, (price, category, product_id))
+
+        conn.commit()
     except:
         return 0x03
     
@@ -506,6 +544,7 @@ def logoutQuery(id=None):
         writeLog("로그인", id + " 로그아웃")
         
     conn.execute_query(sql)
+    conn.commit()
 
 def productListQuery():
     sql = "select * from products"
@@ -527,6 +566,7 @@ def loginQuery(id, pw):
                         
             sql = "update user set status = 1 where login_id = '" + id + "'"
             conn.execute_query(sql)
+            conn.commit()
 
             writeLog("로그인", id + " 로그인 성공")
             return {"status":1, "user_id":result[1], "name":result[2]}
@@ -538,14 +578,18 @@ def loginQuery(id, pw):
         writeLog("로그인", "로그인 에러 : " + e)
 
     
-def fetchLog(self):
-    sql = "select * from log"
-    result = self.conn.fetch_all(sql)
+def fetchLog():
+    sql = "select * from log order by id desc limit 500"
+    result = conn.fetch_all(sql)
+
+    return result
 
 def writeLog(type, message):
     try:
         sql = "insert into log(event_type, message) values(%s, %s)"
         conn.execute_query(sql, (type, message))
+
+        conn.commit()
     except Exception as e:
         conn.rollback()
         print("write log failed...", e)
@@ -569,6 +613,35 @@ def robotServerReceive(data):
             result = fetchSection()
             data = {"command":"TL", "status":0x01, "data":result}
             client.sendData(data)
+    elif command == "PU":
+        status = data["status"]
+
+        if status == 0x00:
+            group_id = data["group_id"]
+
+            updateOrderStatus(group_id, 2)
+
+            try:
+                user_socket = server.client_list[group_id]
+
+                server.sendData(user_socket, {"command":"PU", "status":0x01})
+            except:
+                pass
+
+    elif command == "LOG":
+        status = data["status"]
+        if status == 0x01:
+            log_type = data["type"]
+            message = data["message"]
+
+            writeLog(log_type, message)
+
+def updateOrderStatus(group_id, status):
+    try:
+        sql = "update order_group set status = %s where id = %s"
+        conn.execute_query(sql, (status, group_id))
+    except:
+        conn.rollback()
 
 def fetchSection():
     sql = "select uid from section"
@@ -583,6 +656,7 @@ def fetchSection():
 
     return data
         
+process_group_id = -1
 
 if __name__ == "__main__":
     app = QCoreApplication(sys.argv)
