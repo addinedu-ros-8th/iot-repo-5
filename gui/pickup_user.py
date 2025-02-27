@@ -1,10 +1,13 @@
 import sys
 import os
 import json
+import time
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QObject
+from PyQt5.QtCore import pyqtSignal, QDate, QObject, QEvent, Qt
 from PyQt5.QtNetwork import QTcpSocket, QHostAddress
 
 path = os.path.join(os.path.dirname(__file__), 'pickup_user.ui') 
@@ -89,7 +92,7 @@ class WindowClass(QMainWindow, from_class):
         self.setFixedSize(280, 140)
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
         self.socket.receive_data.connect(self.receiveData)
 
         self.groupBox.setEnabled(False)
@@ -103,6 +106,12 @@ class WindowClass(QMainWindow, from_class):
         self.tbOrder.setSelectionBehavior(QTableWidget.SelectRows)
         self.tbShoppingCart.setSelectionBehavior(QTableWidget.SelectRows)
         self.tbOrderList.setSelectionBehavior(QTableWidget.SelectRows)
+        self.tbOrder.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbShoppingCart.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbOrderList.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tbOrder.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tbShoppingCart.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tbOrderList.setSelectionMode(QAbstractItemView.SingleSelection)
         self.tbOrder.itemClicked.connect(self.selectProduct)
         self.tabWidget.setCurrentIndex(0)
         self.tabWidget.currentChanged.connect(self.tabChanged)
@@ -113,6 +122,14 @@ class WindowClass(QMainWindow, from_class):
         self.btnModify.clicked.connect(self.modifyShoppingCart)
         self.btnCheckout.clicked.connect(self.checkout)
         self.tbOrderList.itemDoubleClicked.connect(self.receiveProduct)
+        self.pushButton.clicked.connect(self.fetchOrderList)
+        diff_date = datetime.now() - timedelta(days=1825)
+        self.dateEdit.setMinimumDate(diff_date)
+        self.dateEdit.setMaximumDate(datetime.now())
+        self.dateEdit_2.setMinimumDate(diff_date)
+        self.dateEdit_2.setMaximumDate(datetime.now())
+        self.dateEdit.setDate(diff_date)
+        self.dateEdit_2.setDate(datetime.now())
         clickable(self.lblRegist).connect(self.showRegistWindow)
 
         self.setHeaderSisze()
@@ -120,9 +137,43 @@ class WindowClass(QMainWindow, from_class):
 
         self.socket.sendData({"command":"PU", "status":0x00})
 
+        self.isPickup = False
+
+    def fetchOrderList(self):
+        flag = -1
+        if self.rbAll.isChecked():
+            flag = -1
+        elif self.rbReady.isChecked():
+            flag = 0
+        elif self.rbCarray.isChecked():
+            flag = 1
+        elif self.rbPickup.isChecked():
+            flag = 2
+        data = {
+            "command" : "OL",
+            "status" : 0x01,
+            "user_id" : self.user_id,
+            "flag" : flag
+        }
+        self.socket.sendData(data)
+
+
     def receiveProduct(self):
         row = self.tbOrderList.currentRow()
-        print(row)
+        
+        status = self.tbOrderList.item(row, 3).text()
+        group_id = self.tbOrderList.item(row, 0).data(Qt.UserRole)
+        if status == "픽업요청":
+            ret = QMessageBox.information(self, "Pickup...", "상품을 픽업하시겠습니까?", QMessageBox.Yes | QMessageBox.No)
+            if ret == QMessageBox.Yes:
+                data = {
+                    "command" : "PU",
+                    "status" : 0x01,
+                    "user_id" : self.user_id,
+                    "group_id" : group_id
+                }
+                self.socket.sendData(data)
+
 
     def showRegistWindow(self):
         self.windows = RegistWindow(self.socket)
@@ -251,13 +302,14 @@ class WindowClass(QMainWindow, from_class):
                     row = self.tbOrderList.rowCount()
                     self.tbOrderList.insertRow(row)
 
-                    product_name = items[0]
                     quantity = items[1]
                     price = items[2]
                     status = items[3]
                     date = items[4]
 
-                    self.tbOrderList.setItem(row, 0, QTableWidgetItem(product_name))
+                    product_name = QTableWidgetItem(items[0])
+                    product_name.setData(Qt.UserRole, items[5])
+                    self.tbOrderList.setItem(row, 0, product_name)
                     self.tbOrderList.setItem(row, 1, QTableWidgetItem(str(quantity)))
                     self.tbOrderList.setItem(row, 2, QTableWidgetItem(str(price)))
                     if status == 0:
@@ -266,11 +318,34 @@ class WindowClass(QMainWindow, from_class):
                         text = "상품적재중"
                     elif status == 2:
                         text = "픽업요청"
+                        self.isPickup = True
+                    elif status == 3:
+                        text = "픽업완료"
                     self.tbOrderList.setItem(row, 3, QTableWidgetItem(text))
                     self.tbOrderList.setItem(row, 4, QTableWidgetItem(str(date).split(" ")[0]))
+                    
+                if self.isPickup:
+                    QMessageBox.information(self, "Pickup...", "상품이 준비되었습니다. 픽업을 위해 매장에 방문 바랍니다.")
+
         elif command == "PU":
-            if data["status"] == 0x01:
+            if data["status"] == 0x00:
                 QMessageBox.information(self, "Alaram...", "상품이 준비되었습니다. 픽업을 위해 매장에 방문 바랍니다.")
+                data = {
+                "command" : "OL",
+                "status" : 0x00,
+                "user_id" : self.user_id
+                 }
+                self.socket.sendData(data)
+            elif data["status"] == 0x01:
+                QMessageBox.warning(self, "Success", "상품 픽업이 완료되었습니다.")
+                self.isPickup = False
+                
+                data = {
+                "command" : "OL",
+                "status" : 0x00,
+                "user_id" : self.user_id
+                 }
+                self.socket.sendData(data)
 
 
     def checkout(self):
@@ -309,6 +384,8 @@ class WindowClass(QMainWindow, from_class):
 
         if row < 0:
             QMessageBox.warning(self, "Failed...", "수정할 상품을 선택해주세요.")
+        elif self.lblQuantity.text() == "0":
+            QMessageBox.warning(self, "Failed...", "해당 상품은 품절입니다.")
         else:
             cart_id = self.tbShoppingCart.item(row, 0).text()
             quantity = self.tbShoppingCart.cellWidget(row, 2).value()
@@ -364,7 +441,7 @@ class WindowClass(QMainWindow, from_class):
 
     def selectProduct(self):
         row = self.tbOrder.currentRow()
-        name = self.tbOrder.item(row, 2).text()
+        name = self.tbOrder.item(row, 1).text()
         quantity = self.tbOrder.item(row, 3).text()
         price = self.tbOrder.item(row, 4).text()
 
