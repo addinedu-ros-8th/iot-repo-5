@@ -489,6 +489,9 @@
      <property name="text">
       <string>전체</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
     <widget class="QRadioButton" name="rbReady">
      <property name="geometry">
