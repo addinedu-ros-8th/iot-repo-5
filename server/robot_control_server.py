@@ -107,8 +107,6 @@ class Server(QTcpServer):
                         return
                 elif command == "MV":
                     if status == 0x01:
-                        print("픽업 스테이션 도착")
-
                         data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 픽업 스테이션 도착"}
                         self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
 
@@ -118,6 +116,9 @@ class Server(QTcpServer):
                         data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇 홈 스테이션 도착"}
                         self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
                         self.group_id = 0
+
+                        data = {"command":"PU", "status":0x02}
+                        self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
             else:
                 command = data["command"]
                 status = data["status"]
@@ -160,7 +161,6 @@ class Server(QTcpServer):
 
                         for section_id, quantity in self.order_list.items():
                             data = struct.pack("<2sBBc", command.encode(), status, section_id, b'\n')
-                            print(data)
                             self.sendData(self.client_list[Client.ROBOT.value], data)
                             time.sleep(1)
 
@@ -169,6 +169,10 @@ class Server(QTcpServer):
 
                         data = {"command":"LOG", "status":0x01, "type":"로봇", "message":"카트 로봇에 주문정보 전송"}
                         self.sendData(self.client_list[Client.ORDER_SERVER.value], data, 1)
+                elif command == "PU":
+                    if data["status"] == 0x01:
+                        data = struct.pack("<2sBc", "MV".encode(), 0x02, b'\n')
+                        self.sendData(self.client_list[Client.ROBOT.value], data)
 
     def socketDelay(self, socket, data, isOrder=0):
         self.sendData(socket, data, isOrder)
@@ -240,6 +244,13 @@ def processCommand():
         elif command[:2] == "mv":
             data = struct.pack("<2sBc", "MV".encode(), 0x00, b'\n')
             server.sendData(server.client_list[0], data)
+        elif command[:2] == "pi":
+            group_id = int(command.split(' ')[1])
+            data = {"command":"PU", "status":0x00, "group_id":group_id}
+            server.sendData(server.client_list[Client.ORDER_SERVER.value], data, 1)
+        elif command[:2] == "pu":
+            data = {"command":"MV", "status":0x03}
+            server.sendData(server.client_list[Client.ORDER_SERVER.value], data, 1)
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     #if issubclass(exc_type, KeyboardInterrupt):
