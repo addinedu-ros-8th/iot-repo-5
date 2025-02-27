@@ -111,7 +111,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>2</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -172,12 +172,12 @@
      </column>
      <column>
       <property name="text">
-       <string>물품유형</string>
+       <string>물품명</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>물품명</string>
+       <string>물품유형</string>
       </property>
      </column>
      <column>
