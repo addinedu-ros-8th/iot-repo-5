@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
@@ -50,6 +51,8 @@ class AddProductWindow(QDialog):
         self.cbNewCategory.addItem("과자")
         self.cbNewCategory.addItem("아이스크림")
         self.cbNewCategory.addItem("사탕")
+        self.cbNewCategory.addItem("커피")
+        self.cbNewCategory.addItem("차")
 
         self.btnAddProduct.clicked.connect(self.addProduct)
 
@@ -76,11 +79,11 @@ class ModifyProduct(QDialog):
 
         self.requestProduct()
 
-        self.cbProductName.currentIndexChanged.connect(self.changeProduct)
+        self.cbSectionID.currentIndexChanged.connect(self.changeSection)
         self.btnModify.clicked.connect(self.modifyProduct)
 
     def modifyProduct(self):
-        product_name = self.cbProductName.currentText()
+        product_name = self.editProductName.text()
         product_id = self.lblProductID.text()
         category = self.editCategory.text()
         price = self.editPrice.text()
@@ -95,17 +98,19 @@ class ModifyProduct(QDialog):
         }
         self.socket.sendData(data)
 
-    def changeProduct(self):
-        product_name = self.cbProductName.currentText()
+    def changeSection(self):
+        section_uid = self.cbSectionID.currentText()
         
-        self.socket.sendData({"command":"MP", "status":0x01, "name":product_name})
+        self.socket.sendData({"command":"MP", "status":0x01, "uid":section_uid})
 
     def initProductInfo(self, data):
         product_id = data["data"][0]
-        category = data["data"][1]
-        price = data["data"][2]
+        product_name = data["data"][1]
+        category = data["data"][2]
+        price = data["data"][3]
 
         self.lblProductID.setText(str(product_id))
+        self.editProductName.setText(product_name)
         self.editCategory.setText(category)
         self.editPrice.setText(str(price))
 
@@ -113,10 +118,10 @@ class ModifyProduct(QDialog):
         self.socket.sendData({"command":"MP","status":0x00})
 
     def initProductList(self, data):
-        self.cbProductName.clear()
+        self.cbSectionID.clear()
         
         for item in data["data"]:
-            self.cbProductName.addItem(str(item)[2:-2])
+            self.cbSectionID.addItem(str(item)[2:-2])
     
 
 class WindowClass(QMainWindow, from_class):
@@ -133,7 +138,7 @@ class WindowClass(QMainWindow, from_class):
         self.setHeaderSisze()
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.0.2"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
         self.socket.receive_data.connect(self.receiveData)
         
         self.editPW.setEchoMode(QLineEdit.Password)
@@ -169,6 +174,7 @@ class WindowClass(QMainWindow, from_class):
 
         if command == "CON":
             self.groupBox.setEnabled(True)
+            self.editID.setFocus()
         elif command == "FAIL":
             QMessageBox.warning(self, "Error...", "서버 연결 실패")
         elif command == "LI":
@@ -305,17 +311,13 @@ class WindowClass(QMainWindow, from_class):
     def inventoryStore(self):
         row = self.tbInventory.currentRow()
         product = self.tbInventory.item(row, 1).text()
+        product_id = self.tbInventory.item(row, 0).text()
         quantity = self.tbInventory.item(row, 3).text()
         inputQuantity, ok = QInputDialog.getInt(self, "Product Store...", product + " 몇개를 입고하시겠습니까?", int(quantity))
 
         if ok and inputQuantity:
-            sql = "update products set quantity = %s where name = %s"
-            storeQuantity = int(quantity) + int(inputQuantity)
-            self.conn.execute_query(sql, (storeQuantity, product))
-
-            QMessageBox.information(self, "Success...", product + " " + str(storeQuantity) + "개를 입고했습니다.")
-
-            self.updateProductList()
+            data = {"command":"MP", "status":0x03, "product_id":product_id, "quantity":(inputQuantity+int(quantity))}
+            self.socket.sendData(data)
 
     def order(self):
         inventoryQuantity = int(self.lblQuantity.text())
@@ -416,7 +418,9 @@ class WindowClass(QMainWindow, from_class):
         self.tbLog.setColumnWidth(3, 150)
 
     def closeEvent(self, a0):
+        
         if self.login_id != "":
+            print(self.login_id)
             data = {
                 "command" : "LO",
                 "id" : self.login_id
