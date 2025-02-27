@@ -477,6 +477,58 @@
       <string>검색</string>
      </property>
     </widget>
+    <widget class="QRadioButton" name="rbAll">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>220</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>전체</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbReady">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>220</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>주문접수</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbPickup">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>220</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>픽업요청</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbCarray">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>220</y>
+       <width>81</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>상품적재</string>
+     </property>
+    </widget>
    </widget>
   </widget>
  </widget>
