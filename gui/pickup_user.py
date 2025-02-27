@@ -112,12 +112,17 @@ class WindowClass(QMainWindow, from_class):
         self.btnDelete.clicked.connect(self.delShoppingCart)
         self.btnModify.clicked.connect(self.modifyShoppingCart)
         self.btnCheckout.clicked.connect(self.checkout)
+        self.tbOrderList.itemDoubleClicked.connect(self.receiveProduct)
         clickable(self.lblRegist).connect(self.showRegistWindow)
 
         self.setHeaderSisze()
         sys.excepthook = self.handle_exception
 
         self.socket.sendData({"command":"PU", "status":0x00})
+
+    def receiveProduct(self):
+        row = self.tbOrderList.currentRow()
+        print(row)
 
     def showRegistWindow(self):
         self.windows = RegistWindow(self.socket)
