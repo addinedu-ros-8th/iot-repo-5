@@ -237,7 +237,7 @@ def processCommand():
         elif command[:2] == "c2":
             data = struct.pack("<2sBc", "PC".encode(), 0x02, b'\n')
             server.sendData(server.client_list[0], data)
-        elif command[:2] == "c3":
+        elif command[:2] == "mv":
             data = struct.pack("<2sBc", "MV".encode(), 0x00, b'\n')
             server.sendData(server.client_list[0], data)
 
