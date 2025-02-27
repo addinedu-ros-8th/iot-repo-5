@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>320</width>
-    <height>259</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>50</x>
-     <y>30</y>
+     <y>70</y>
      <width>67</width>
      <height>17</height>
     </rect>
@@ -30,7 +30,7 @@
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>30</y>
+     <y>70</y>
      <width>91</width>
      <height>17</height>
     </rect>
@@ -43,7 +43,7 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>113</y>
+     <y>153</y>
      <width>67</width>
      <height>17</height>
     </rect>
@@ -56,7 +56,7 @@
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>110</y>
+     <y>150</y>
      <width>113</width>
      <height>25</height>
     </rect>
@@ -65,8 +65,8 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>70</y>
+     <x>50</x>
+     <y>113</y>
      <width>67</width>
      <height>17</height>
     </rect>
@@ -75,12 +75,12 @@
     <string>상품명 :</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="cbProductName">
+  <widget class="QComboBox" name="cbSectionID">
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>70</y>
-     <width>111</width>
+     <y>30</y>
+     <width>121</width>
      <height>25</height>
     </rect>
    </property>
@@ -89,7 +89,7 @@
    <property name="geometry">
     <rect>
      <x>70</x>
-     <y>153</y>
+     <y>193</y>
      <width>51</width>
      <height>17</height>
     </rect>
@@ -102,7 +102,7 @@
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>150</y>
+     <y>190</y>
      <width>113</width>
      <height>25</height>
     </rect>
@@ -112,13 +112,36 @@
    <property name="geometry">
     <rect>
      <x>100</x>
-     <y>200</y>
+     <y>240</y>
      <width>111</width>
      <height>41</height>
     </rect>
    </property>
    <property name="text">
     <string>수정</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="editProductName">
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>110</y>
+     <width>113</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>33</y>
+     <width>67</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>상품 ID :</string>
    </property>
   </widget>
  </widget>
