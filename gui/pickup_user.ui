@@ -111,7 +111,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>2</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -418,6 +418,9 @@
      <property name="displayFormat">
       <string>yyyy-MM-dd</string>
      </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
     </widget>
     <widget class="QDateEdit" name="dateEdit_2">
      <property name="geometry">
@@ -430,6 +433,9 @@
      </property>
      <property name="displayFormat">
       <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
      </property>
     </widget>
     <widget class="QLabel" name="label_6">
