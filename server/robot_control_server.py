@@ -249,8 +249,8 @@ def processCommand():
             data = {"command":"PU", "status":0x00, "group_id":group_id}
             server.sendData(server.client_list[Client.ORDER_SERVER.value], data, 1)
         elif command[:2] == "pu":
-            data = {"command":"MV", "status":0x03}
-            server.sendData(server.client_list[Client.ORDER_SERVER.value], data, 1)
+            data = {"command":"MV", "status":0x02}
+            server.sendData(server.client_list[Client.ROBOT.value], data, 1)
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     #if issubclass(exc_type, KeyboardInterrupt):
