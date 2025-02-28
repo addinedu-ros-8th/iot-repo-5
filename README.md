@@ -10,7 +10,7 @@ IOT 프로젝트 5조 저장소. 팀 통신보안
   <h3 align="center">무인매장 자동화 시스템(Unmanned Store Automation System)</h3>
 
   <p align="center">
-    <a href="https://youtube.com/">Video Demos</a>
+    <a href="https://youtu.be/7Mb05Vj0SKM">Video Demos</a>
   </p>
 </p>
 
