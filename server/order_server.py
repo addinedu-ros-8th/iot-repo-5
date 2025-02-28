@@ -388,9 +388,11 @@ def processCommand(socket, data):
 
         if status == 0x01:
             group_id = data["group_id"]
+            user_id = data["user_id"]
             
             updateOrderStatus(group_id, 3)
             result = fetchUserID(group_id)
+            print(data, group_id, user_id, result)
 
             server.sendData(socket, {"command":"PU", "status":0x01})
             writeLog("상품", str(result[0]) + "님 주문번호 " + str(result[1]) + "번 픽업 완료")
@@ -682,7 +684,7 @@ def robotServerReceive(data):
             try:
                 sendPickupRequest(result[0])
 
-                writeLog("상품", str(result[0]) + "님 주문번호 " + str(result[1]) + "번  픽업 요청청")
+                writeLog("상품", str(result[0]) + "님 주문번호 " + str(result[1]) + "번  픽업 요청")
             except Exception as ex:
                 pass
     elif command == "MV":
