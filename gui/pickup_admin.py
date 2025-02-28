@@ -26,7 +26,11 @@ class Client(QTcpSocket):
         while self.bytesAvailable() > 0:
             data = self.readAll().data().decode('utf-8')
 
-            self.receive_data.emit(json.loads(data))
+            try:
+                data = json.loads(data)
+                self.receive_data.emit(data)
+            except Exception as e:
+                print("Error : ", e)
 
     def sendData(self, message):
         if self.state() == QTcpSocket.ConnectedState:
