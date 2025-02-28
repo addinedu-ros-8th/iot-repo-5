@@ -486,7 +486,7 @@ def addNewProduct(name, category, price, quantity, uid):
 def orderListQuery(user_id):
     try:
         sql = """
-        select p.name, o.quantity, p.price, g.status, g.date, g.id
+        select p.name, o.quantity, p.price, g.status, g.date, u.name, o.id, g.id
         from  `order` o, products p, order_group g, user u
         where p.id = o.product_id
         and g.id = o.order_group_id and u.id = o.user_id
