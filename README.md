@@ -32,10 +32,10 @@ mp4 - video
 
 |        | name | job |
 |--------|------|-----|
-| leader | 이태민 |  로봇 SW|   
-| worker | 강주빈 |  로봇 SW, 기구 및 트랙 설계 |   
+| leader | 이태민 |  로봇 SW (통신, 주행)|   
+| worker | 강주빈 |  로봇 SW (액추에이터, 센서), 기구 및 트랙 설계 |   
 | worker | 신동철 |  사용자/관리자 GUI, DB 구축, 로봇 및 진열대 설계|    
-| worker | 황한문 |  진열대-로봇 통신, github 관리, 서포트|    
+| worker | 황한문 |  진열대-서버 통신, github 관리, 서포트|    
 
 ## Insructions
 ### Environment   
