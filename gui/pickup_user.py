@@ -307,7 +307,7 @@ class WindowClass(QMainWindow, from_class):
                     date = items[4]
 
                     product_name = QTableWidgetItem(items[0])
-                    product_name.setData(Qt.UserRole, items[5])
+                    product_name.setData(Qt.UserRole, items[7])
                     self.tbOrderList.setItem(row, 0, product_name)
                     self.tbOrderList.setItem(row, 1, QTableWidgetItem(str(quantity)))
                     self.tbOrderList.setItem(row, 2, QTableWidgetItem(str(price)))
