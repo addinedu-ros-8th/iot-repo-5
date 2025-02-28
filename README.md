@@ -108,8 +108,7 @@ mp4 - video
 ![Image](https://github.com/user-attachments/assets/155bbad3-be80-4613-a1be-860b536d4a0a)
 #### 2) HW
 ![Image](https://github.com/user-attachments/assets/48a34ad7-a2c9-4912-a794-00ece34caac0)
-
-### DB 
+#### 3) ERD 
 ![Image](https://github.com/user-attachments/assets/2496272e-e078-4145-b846-1a1755a04ef5)
 
 ## 기능 
