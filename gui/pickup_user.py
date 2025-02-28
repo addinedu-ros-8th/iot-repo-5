@@ -3,7 +3,6 @@ import os
 import json
 import time
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import uic
@@ -92,7 +91,7 @@ class WindowClass(QMainWindow, from_class):
         self.setFixedSize(280, 140)
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
         self.socket.receive_data.connect(self.receiveData)
 
         self.groupBox.setEnabled(False)

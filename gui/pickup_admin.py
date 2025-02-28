@@ -138,7 +138,7 @@ class WindowClass(QMainWindow, from_class):
         self.setHeaderSisze()
 
         self.socket = Client()
-        self.socket.connectToHost(QHostAddress("192.168.50.92"), 8889)
+        self.socket.connectToHost(QHostAddress("192.168.0.41"), 8889)
         self.socket.receive_data.connect(self.receiveData)
         
         self.editPW.setEchoMode(QLineEdit.Password)

@@ -759,7 +759,7 @@ if __name__ == "__main__":
     server = Server()
 
     client = Client()
-    client.connectToHost(QHostAddress("192.168.50.92"), 8888)
+    client.connectToHost(QHostAddress("192.168.0.41"), 8888)
     client.receive_data.connect(robotServerReceive)
 
     conn = database.pickup_database(
