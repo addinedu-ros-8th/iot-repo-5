@@ -150,9 +150,10 @@ mp4 - video
 || 각 스테이션(픽업, 홈) 이동이 가능한가? | Pass |
 || 특정 상품위치로 이동이 가능한가? | Pass |
 
-### Controller    
+### 제어기    
 ####  진열대
-
+![Image](https://github.com/user-attachments/assets/69f04f5b-e3d6-4b89-aa45-9b9d738fd866)
+<br >
 |  기능  | 설명 | 결과 |
 |:------:|------|:------:| 
 | 통신 | 서버와 통신이 원할한가? | Pass |  
