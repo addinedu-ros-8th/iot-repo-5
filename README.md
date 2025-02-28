@@ -84,7 +84,7 @@ mp4 - video
 ## Design
 ### Scenario
 #### 1) Simple Diagram
-![Image](https://github.com/user-attachments/assets/e1c22b09-117d-44b7-bf4d-6ef9c9801795)
+![Image](https://github.com/user-attachments/assets/16a47ce1-faac-43d8-9173-9a00472122a5)
 #### 2) State Diagram 
 ![Image](https://github.com/user-attachments/assets/08dd3445-5a55-44e2-a649-a6bde1d3b854)
 #### 3) Sequencial Diagram
@@ -94,13 +94,13 @@ mp4 - video
 - 주문 성공
 <br />
 
-![Image](https://github.com/user-attachments/assets/544a52f5-0b6e-44fd-bac2-ecda6f1b76f6)
+![Image](https://github.com/user-attachments/assets/c256f96b-be14-4c8f-a79d-3c5e688e27b1)
 
 - 주문 실패
 <br />
 
 ![Image](https://github.com/user-attachments/assets/8a7f0017-a248-45a8-a75e-a6beacbc1951)
-#### 3-3) 물품 수령
+#### 3-3) 상품 수령
 ![Image](https://github.com/user-attachments/assets/856504b6-d61d-43d5-8dc4-7052969bbe57)
 
 ### Architecture  
@@ -112,64 +112,66 @@ mp4 - video
 ### DB 
 ![Image](https://github.com/user-attachments/assets/2496272e-e078-4145-b846-1a1755a04ef5)
 
-## Fuction 
-### Function list 
+## 기능 
+### 기능 리스트 
 |  기능  | 설명 |
-|--------|------| 
+|:--------:|------| 
 | Auth  | ID,PW 인증관리 |    
 | Stock | 재고확인, 재고업데이트 |     
 | Order | 제품검색, 제품수량선택, 재고없는 제품은 주문 불가능 |      
-| Move | 로봇이 Home station에서 각 상품 위치로 이동, Pickup station으로 이동 |     
+| Move | 로봇이 홈 스테이션에서 각 상품 위치로 이동, 픽업 스테이션으로 이동 |     
 | Detect| 로봇의 장애물 감지시 경고 알림(LED, Buzzer), RFID Tag를 통한 상품 위치 인식|
 | Load | 진열대에서 물품 개수만큼 카트에 투하, 올바른 적재 확인 |
 | Control | 관리자는 로봇을 자동/수동 제어 | 
 
-### Client 
+### 주문자 
 ![Image](https://github.com/user-attachments/assets/5c8b4340-f920-48ad-b42c-772034872c96)
 
 |  기능  | 설명 | 결과 |
-|--------|------|------| 
+|:--------:|------|:------:| 
 | 인증 | 사용자 인증이 가능한가? | Pass |
-| 제품검색 | 제품명, 금액, 유형을 통해 제품을 찾을 수 있는가? | Fail |
-|| 매장의 물품 재고를 확인할 수 있는가? | Pass |
-| 장바구니 | 장바구니를 통해 물품을 담거나 주문한 내역을 확인이 가능한가 ?| Pass | 
+| 상품검색 | 상품명, 금액, 유형을 통해 제품을 찾을 수 있는가? | Fail |
+|| 매장의 상품 재고를 확인할 수 있는가? | Pass |
+| 장바구니 | 장바구니를 통해 상품을 담거나 주문한 내역을 확인이 가능한가 ?| Pass | 
 | 주문 | 재고가 있을떄 주문이 가능한가 | Pass |
 || 수량을 정할수 있는가? | Pass |
 || 장바구니에 담긴걸 일괄로 주문이 가능한가? | Pass |
 | 재고오류 | 재고가 주문한 수량보다 적을시, 주문이 실패하는가? | Pass |  
 
 
-### Admin
+### 관리자
 ![Image](https://github.com/user-attachments/assets/6fc59766-d309-4134-a80d-dd29f08eb7dc)
 
 |  기능  | 설명 | 결과 |
-|--------|------|------| 
+|:--------:|------|:------:| 
 | 재고관리 | 관리자는 재고를 확인 할 수 있는가? | Pass |
 || 관리자가 재고를 업데이트시, 반영이 되는가? | Pass |
 | 수동제어 | 로봇의 정지, 전진, 좌회전, 우회전이 가능한가? | Fail |
-|| 각 staation(pickup, home) 이동이 가능한가? | Fail |
-|| 특정 물품으로 이동이 가능한가? | Fail |
+|| 각 스테이션(픽업, 홈) 이동이 가능한가? | Pass |
+|| 특정 상품위치로 이동이 가능한가? | Pass |
 
 ### Controller    
 ####  진열대
 
 |  기능  | 설명 | 결과 |
-|------|------|------| 
-| 통신 | Server와 통신이 원할한가? | Pass |  
-| 물품적재 | Client가 주문한 수량과 물품이 정확하게 카트에 적재되는가? | Pass |  
+|:------:|------|:------:| 
+| 통신 | 서버와 통신이 원할한가? | Pass |  
+| 상품적재 | 주문자가 주문한 수량과 상품이 정확하게 카트에 적재되는가? | Pass |  
 
 ####  로봇 
+![Image](https://github.com/user-attachments/assets/7121af5a-6aab-47bc-a883-a3509a3b573c)
+<br >
 |  기능  | 설명 | 결과 |
-|--------|------|------| 
+|:--------:|------|:------:| 
 | 로봇이동 | 장애물 감지시, 알람을 울리는가? | Fail |    
-|| 요청한 상품 section ID로 정확하게 이동하는가?  | Pass | 
-|| pickup station과 home station 이동이 원활한가? | Fail |
-|| client가 주문한 물품을 찾아갈 떄까지 pickup station에서 대기 하는가? | Fail |
+|| 요청한 상품 ID로 정확하게 이동하는가?  | Pass | 
+|| 픽업 스테이션과 홈 스테이션 이동이 원활한가? | Pass |
+|| 주문자가 주문한 상품을 찾아갈 때 까지 픽업 스테이션에서 대기 하는가? | Pass |
 | 장애물감지 | 경로 상에 장애물을 감지하는가? | Fail |
 || 장애물 감지시 시각적 청각적으로 알람을 울리는가? | Fail |
-| 물품구분 | 주문한 물품을 정확히 구분하는가? | Pass | 
-|| 읽어온 태그 정보를 바탕으로 주문한 물품인지 판단이 가능한가F | Pass |
-|물품적재확인 | 로봇카트에 물품이 정상적으로 적재되었는지 확인이 가능한가? | Fail |
+| 물품구분 | 주문한 상품을 정확히 구분하는가? | Pass | 
+|| 읽어온 태그 정보를 바탕으로 주문한 상품인지 판단이 가능한가? | Pass |
+|상품적재확인 | 로봇카트에 상품이 정상적으로 적재되었는지 확인이 가능한가? | Fail |
  
 ## Project Schesule
 Project Period: 2025.02.19~2025.02.26
