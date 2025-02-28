@@ -25,7 +25,6 @@ class Client(QTcpSocket):
     def receiveData(self):
         while self.bytesAvailable() > 0:
             data = self.readAll().data().decode('utf-8')
-            print("Receive Data : ", data)
 
             try:
                 data = json.loads(data)
@@ -35,7 +34,7 @@ class Client(QTcpSocket):
 
     def sendData(self, message):
         if self.state() == QTcpSocket.ConnectedState:
-            data = json.dumps(message)
+            data = json.dumps(message, default=str)
             self.write(data.encode('utf-8'))
 
     def on_connected(self):

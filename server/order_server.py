@@ -23,7 +23,7 @@ class Client(QTcpSocket):
             data = self.readAll().data().decode('utf-8')
 
             try:
-                data = json.loads(data)
+                data = json.loads(data, )
                 print("Received Robot Data : ", data)
                 self.receive_data.emit(data)
             except:
