@@ -81,8 +81,8 @@ mp4 - video
 ```
 
 
-## Design
-### Scenario
+## 설계
+### 시나리오
 #### 1) Simple Diagram
 ![Image](https://github.com/user-attachments/assets/16a47ce1-faac-43d8-9173-9a00472122a5)
 #### 2) State Diagram 
