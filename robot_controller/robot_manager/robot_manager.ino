@@ -55,6 +55,10 @@ int motorSpeed = 160;
 
 uint32_t* tagList;
 
+int cntMask = 0;
+
+bool prevDetected = false;
+
 // Esp01 Status
 enum EspStatus {
   STATUS_YES,
@@ -114,12 +118,10 @@ int getOrder(uint8_t* data, uint8_t* order);
 bool isTagDetected();
 bool isMaskAll();
 
-int cntMask = 0;
-
-bool prevDetected = false;
-
 void setup()
 {
+  pinMode(13, OUTPUT);
+  digitalWrite(13, HIGH);
   Serial.begin(115200);
   WifiSerial->begin(115200);
   Wire.begin();
@@ -128,7 +130,6 @@ void setup()
 
   SPI.begin();			// Init SPI bus
 	mfrc522.PCD_Init();		// Init MFRC522
-  analogWrite(BUZZER_PIN, 0);
   
   // 자이로 센서 초기화 확인
   if (!mpu.testConnection())
@@ -140,7 +141,7 @@ void setup()
 
   // 초기 오프셋 측정 (센서를 고정한 상태에서 실행)
   Serial.println("자이로 센서 오프셋 보정 중... 3초간 가만히 두세요.");
-  delay(1000);
+  delay(2000);
   calibrateGyroZ();
   Serial.println("자이로 센서 오프셋 보정 완료!");
 
@@ -152,7 +153,7 @@ void setup()
   int port = 8888;
   
   delay(1000);
-  
+  /*
   // Wait connecting Wifi
   connectWifi(ssid, pwd);
   // Wait connecting Server
@@ -165,7 +166,7 @@ void setup()
     Serial.print(tagList[j], HEX);
     Serial.println();
   }
-  
+  */
   
   // IR 센서 핀 모드
   pinMode(IR_L, INPUT);
@@ -190,16 +191,18 @@ void setup()
   pinMode(BUZZER_PIN, OUTPUT);
   
   // LED 및 Fuzzer 초기화
-  digitalWrite(GREEN_LED, HIGH);
-  digitalWrite(RED_LED, HIGH);
-  digitalWrite(YELLOW_LED, HIGH);
   digitalWrite(BUZZER_PIN, LOW);
-  
+
+  updateYaw();
+      rotate(180);
+      moveForward();
+      delay(100);
+      stopMotors();
 }
 
 void loop()
 {
-  static RobotStatus currentRobotStatus = HOME;
+  static RobotStatus currentRobotStatus = MOVING_TO_HP;
   static RobotStatus prevRobotStatus = HOME;
   static Command cmd = NOTTING;
   static int cntProduct = 0;
@@ -208,7 +211,7 @@ void loop()
   static uint8_t order[5];
   static bool* recvOrder;
   
-  //updateYaw();
+  updateYaw();
   //lineTrace();
   //moveForward();
   /*
@@ -221,6 +224,7 @@ void loop()
     Serial.println(WifiSerial->readStringUntil('\n'));
   }
   */
+  
   if (getDataFromServer(data) > 0) {
     cmd = getCmd(data);
   } else {
@@ -256,6 +260,12 @@ void loop()
     currentRobotStatus = MOVING_TO_PP;
     cntMask = 0;
   } else if (cmd == MOVE_TO_HP) {
+      updateYaw();
+      rotate(180);
+      moveForward();
+      delay(100);
+      stopMotors();
+    
     prevRobotStatus = currentRobotStatus;
     currentRobotStatus = MOVING_TO_HP;
     
@@ -325,10 +335,6 @@ void loop()
       }
       break;
     case MOVING_TO_HP:
-      rotate(180);
-      moveForward();
-      delay(100);
-      stopMotors();
       if (isMaskAll()) {
         Serial.print("cntMask: ");
         Serial.println(++cntMask);
@@ -340,7 +346,7 @@ void loop()
           stopMotors();
         } else if (cntMask == 2) {
           stopMotors();
-          rotate(-90);
+          rotate(90);
           moveForward();
           delay(100);
           stopMotors();
@@ -354,6 +360,24 @@ void loop()
         lineTrace();
       }
       break;
+  }
+  
+  if (currentRobotStatus == HOME || currentRobotStatus == GETTING_PRODUCT) {
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(YELLOW_LED, HIGH);
+    digitalWrite(GREEN_LED, LOW);
+  } else if (
+    currentRobotStatus == MOVING_TO_SEC ||
+    currentRobotStatus == MOVING_TO_PP ||
+    currentRobotStatus == MOVING_TO_HP
+  ) {
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(YELLOW_LED, LOW);
+    digitalWrite(GREEN_LED, HIGH);
+  } else if (currentRobotStatus == WAIT) {
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(YELLOW_LED, HIGH);
+    digitalWrite(GREEN_LED, LOW);
   }
   
  
@@ -401,26 +425,22 @@ void setMotorSpeed(int leftSpeed, int rightSpeed)
 void moveForward()
 {
   setMotorSpeed(motorSpeed, motorSpeed);
-  digitalWrite(GREEN_LED, HIGH);
 }
 
 void moveBackward()
 {
   setMotorSpeed(-motorSpeed, -motorSpeed);  // 음수 전달하여 후진
-  digitalWrite(GREEN_LED, HIGH);
 }
 
 void turnLeft()
 {
   
   setMotorSpeed(-motorSpeed, motorSpeed);
-  digitalWrite(GREEN_LED, HIGH);
 }
 
 void turnRight()
 {
   setMotorSpeed(motorSpeed, -motorSpeed);
-  digitalWrite(GREEN_LED, HIGH);
 }
 
 void gyroturnRight()
@@ -438,7 +458,6 @@ void gyroturnLeft()
 void stopMotors()
 {
   setMotorSpeed(0, 0); // 속도 0으로 설정하여 정지
-  digitalWrite(GREEN_LED, LOW);
 }
 
 void lineTrace() {
@@ -511,13 +530,13 @@ bool checkObstacle()
 
 void updateYaw()
 {
-  static unsigned long lastTime = millis();
-  unsigned long currentTime = millis();
-  float deltaTime = (currentTime - lastTime) / 1000.0;  // 초 단위 시간 변화량
-  lastTime = currentTime;
+    static unsigned long long lastTime = millis(); // micros() 사용
+    unsigned long long currentTime = millis();
+    float deltaTime = (currentTime - lastTime) / 1000.0; // 초 단위 변환
+    lastTime = currentTime;
 
-  float yawRate = getYawRate();  // 자이로 센서에서 Z축 회전 속도 가져오기
-  yaw -= yawRate * deltaTime;    // Yaw 값 적분하여 업데이트
+    float yawRate = getYawRate();
+    yaw -= yawRate * 0.013;
 }
 
 // === 자이로 Z축 오프셋 보정 함수 ===
@@ -555,6 +574,7 @@ float getYaw()
 
 void rotateToAngle(float targetAngle)
 {
+  yaw = 0;
   float initialYaw = yaw; // 현재 yaw 값 저장
   unsigned long lastTime = millis();
 
