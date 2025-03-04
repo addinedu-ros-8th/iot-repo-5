@@ -765,10 +765,10 @@ if __name__ == "__main__":
     client.receive_data.connect(robotServerReceive)
 
     conn = database.pickup_database(
-        "addinedu.synology.me",
-        "pickup",
-        "Addinedu5!",
-        "pickup"
+        "",
+        "",
+        "",
+        ""
     )
 
     robotThread = RobotControlThread(conn, client)
