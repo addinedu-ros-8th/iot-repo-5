@@ -1,4 +1,4 @@
-# iot-repo-5 TEST
+# iot-repo-5
 IOT 프로젝트 5조 저장소. 팀 통신보안
 <!-- PROJECT LOGO -->
 <br />
