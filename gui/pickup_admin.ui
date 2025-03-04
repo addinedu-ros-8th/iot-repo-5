@@ -110,11 +110,11 @@
     </size>
    </property>
    <property name="currentIndex">
-    <number>3</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
-     <string>물품 재고</string>
+     <string>상품 재고</string>
     </attribute>
     <widget class="QTableWidget" name="tbInventory">
      <property name="geometry">
@@ -127,7 +127,7 @@
      </property>
      <column>
       <property name="text">
-       <string>물품ID</string>
+       <string>상품명</string>
       </property>
      </column>
      <column>
@@ -137,7 +137,7 @@
      </column>
      <column>
       <property name="text">
-       <string>물품유형</string>
+       <string>상품유형</string>
       </property>
      </column>
      <column>
@@ -182,12 +182,7 @@
      </column>
      <column>
       <property name="text">
-       <string>물품명</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>물품수량</string>
+       <string>상품수량</string>
       </property>
      </column>
      <column>
@@ -204,7 +199,7 @@
    </widget>
    <widget class="QWidget" name="tab_2">
     <attribute name="title">
-     <string>물품 주문</string>
+     <string>상품 주문</string>
     </attribute>
     <widget class="QTableWidget" name="tbOrder">
      <property name="geometry">
@@ -217,17 +212,17 @@
      </property>
      <column>
       <property name="text">
-       <string>물품ID</string>
+       <string>상품ID</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>물품유형</string>
+       <string>상품유형</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>물품명</string>
+       <string>상품명</string>
       </property>
      </column>
      <column>
@@ -298,7 +293,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>물품명 : </string>
+      <string>상품명 : </string>
      </property>
     </widget>
     <widget class="QLabel" name="lblProductName">

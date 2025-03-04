@@ -111,11 +111,11 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>2</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
-     <string>물품주문</string>
+     <string>상품주문</string>
     </attribute>
     <widget class="QLabel" name="label_3">
      <property name="geometry">
@@ -127,7 +127,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>물품명 : </string>
+      <string>상품명 : </string>
      </property>
     </widget>
     <widget class="QPushButton" name="btnOrder">
@@ -167,17 +167,17 @@
      </property>
      <column>
       <property name="text">
-       <string>물품ID</string>
+       <string>상품ID</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>물품유형</string>
+       <string>상품명</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>물품명</string>
+       <string>상품유형</string>
       </property>
      </column>
      <column>
@@ -287,7 +287,7 @@
      </column>
      <column>
       <property name="text">
-       <string>물품명</string>
+       <string>상품명</string>
       </property>
      </column>
      <column>
@@ -363,7 +363,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>물품 삭제</string>
+      <string>상품 삭제</string>
      </property>
     </widget>
    </widget>
@@ -382,7 +382,7 @@
      </property>
      <column>
       <property name="text">
-       <string>물품명</string>
+       <string>상품명</string>
       </property>
      </column>
      <column>
@@ -411,25 +411,31 @@
       <rect>
        <x>80</x>
        <y>180</y>
-       <width>101</width>
+       <width>111</width>
        <height>26</height>
       </rect>
      </property>
      <property name="displayFormat">
       <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
      </property>
     </widget>
     <widget class="QDateEdit" name="dateEdit_2">
      <property name="geometry">
       <rect>
-       <x>210</x>
+       <x>220</x>
        <y>180</y>
-       <width>101</width>
+       <width>111</width>
        <height>26</height>
       </rect>
      </property>
      <property name="displayFormat">
       <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
      </property>
     </widget>
     <widget class="QLabel" name="label_6">
@@ -448,7 +454,7 @@
     <widget class="QLabel" name="label_7">
      <property name="geometry">
       <rect>
-       <x>190</x>
+       <x>200</x>
        <y>183</y>
        <width>67</width>
        <height>17</height>
@@ -461,7 +467,7 @@
     <widget class="QPushButton" name="pushButton">
      <property name="geometry">
       <rect>
-       <x>330</x>
+       <x>350</x>
        <y>180</y>
        <width>111</width>
        <height>71</height>
@@ -471,23 +477,62 @@
       <string>검색</string>
      </property>
     </widget>
+    <widget class="QRadioButton" name="rbAll">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>220</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>전체</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbReady">
+     <property name="geometry">
+      <rect>
+       <x>70</x>
+       <y>220</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>주문접수</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbPickup">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>220</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>픽업요청</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="rbCarray">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>220</y>
+       <width>81</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>상품적재</string>
+     </property>
+    </widget>
    </widget>
-  </widget>
-  <widget class="QPushButton" name="btnPickup">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>360</x>
-     <y>60</y>
-     <width>101</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>상품 수령</string>
-   </property>
   </widget>
  </widget>
  <resources/>

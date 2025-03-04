@@ -23,7 +23,9 @@ class Client(QTcpSocket):
             data = self.readAll().data().decode('utf-8')
 
             try:
-                self.receive_data.emit(json.loads(data))
+                data = json.loads(data, )
+                print("Received Robot Data : ", data)
+                self.receive_data.emit(data)
             except:
                 # json 데이터가 아닐경우 패스
                 pass
@@ -79,15 +81,16 @@ class RobotControlThread(QThread):
     def __init__(self, conn, socket):
         super().__init__()
         self.conn = conn
-        self.running = True
-        self.isMove = False
         self.socket = socket
+        self.isMoving = False
         self.section_list = []
         self.product_list = []
         self.quantity_list = []
 
     def run(self):
-        while self.running:
+        print("Robot Control Thread Start")
+        self.running = True
+        while self.running and not self.isMoving:
             self.check_order_status()
             self.msleep(5000)  # 5초마다 체크
 
@@ -103,7 +106,7 @@ class RobotControlThread(QThread):
             """
             result = self.conn.fetch_all(sql, (group_id[0],))
             
-            #print(result)
+            print(result)
             if result is not None:
                 section_list = []
                 product_list = []
@@ -121,11 +124,12 @@ class RobotControlThread(QThread):
                     "quantity_list" : quantity_list
                 }
                 self.thread_data.emit(data)
-                self.running = False
+                self.stop()
         except Exception as e:
             print(f"Error checking order status: {e}")
 
     def stop(self):
+        print("Robot Control Thread Stop")
         self.running = False
 
 def sendOrderList(data):
@@ -146,6 +150,17 @@ def sendOrderList(data):
 
     updateOrderStatus(group_id, 1)
 
+    login_id = fetchUserID(group_id)
+    for socket in server.client_list:
+        if server.client_list[socket] == login_id[0]:
+            if socket.state() == QTcpSocket.ConnectedState:
+                result = orderListQuery(user_id)
+
+                data = {"command" : "OL"}
+                data.update(result)
+                server.sendData(socket, data)
+                break
+
 def processCommand(socket, data):
     command = data["command"]
     
@@ -156,7 +171,7 @@ def processCommand(socket, data):
         result = loginQuery(login_id, pw)
 
         if result["status"] == 1:
-            server.client_list[login_id] = socket
+            server.client_list[socket] = login_id
         
         data = {"command" : "LI"}
         data.update(result)
@@ -191,9 +206,9 @@ def processCommand(socket, data):
             }
             server.sendData(socket, data)
         elif status == 0x01:
-            product_name = data["name"]
+            uid = data["uid"]
 
-            result = fetchProductInfo(product_name)
+            result = fetchProductInfo(uid)
             data = {
                 "command" : "MP",
                 "status" : 0x01,
@@ -214,6 +229,10 @@ def processCommand(socket, data):
             }
             server.sendData(socket, data)
             writeLog("상품", "상품 수정 : [" + product_name + "(" + category + "), " + str(price) + "원]")
+        elif status == 0x03:
+            sql = "update products set quantity = %s where id = %s"
+            conn.execute_query(sql, (data["quantity"], data["product_id"]))
+            conn.commit()
     elif command == "REG":
         if data["status"] == 0x00:
             name = data["name"]
@@ -313,7 +332,7 @@ def processCommand(socket, data):
             }
             server.sendData(socket, data)
 
-            writeLog(f"장바구니", "장바구니 결제(유저ID : {user_id}, 카트ID : {cart_id})")
+            writeLog("장바구니", "장바구니 결제(유저ID : " + str(user_id) + ", 카트ID : " + str(cart_id) + ")")
             
             if not robotThread.isRunning():
                 robotThread.start()
@@ -332,6 +351,26 @@ def processCommand(socket, data):
             server.sendData(socket, data)
 
             return
+        elif status == 0x01:
+            flag = data["flag"]
+
+            sql = """
+            select p.name, o.quantity, p.price, g.status, g.date, g.id
+                    from  `order` o, products p, order_group g, user u
+                    where p.id = o.product_id
+                    and g.id = o.order_group_id and u.id = o.user_id
+                    order by g.id
+            """
+            if flag == 0:
+                sql += " where g.status = 0"
+            elif flag == 1:
+                sql += " where g.status = 1"
+            elif flag == 2:
+                sql += " where g.status = 2"
+
+            result = conn.fetch_all(sql)
+            data = {"command":"OL", "status":0x00, "data":result}
+            server.sendData(socket, data)
     elif command == "LOG":
         status = data["status"]
         if status == 0x00:
@@ -344,6 +383,20 @@ def processCommand(socket, data):
             message = data["message"]
 
             writeLog(log_type, message)
+    elif command == "PU":
+        status = data["status"]
+
+        if status == 0x01:
+            group_id = data["group_id"]
+            user_id = data["user_id"]
+            
+            updateOrderStatus(group_id, 3)
+            result = fetchUserID(group_id)
+            print(data, group_id, user_id, result)
+
+            server.sendData(socket, {"command":"PU", "status":0x01})
+            writeLog("상품", str(result[0]) + "님 주문번호 " + str(result[1]) + "번 픽업 완료")
+            client.sendData({"command":"PU", "status":0x01})
     elif command == "RS":
         status = data["status"]
         if status == 0x00:
@@ -356,13 +409,7 @@ def processCommand(socket, data):
 
             updateRobot(1, section, status)
 
-def fetchPickup(user_id):
-    sql = "selct id from order_group where user_id = %s and status = 1"
-    group_id = conn.fetch_one(sql, (user_id,))
-
-    return group_id[0]
-
-def fetchRobot(self, id):
+def fetchRobot(id):
     sql = "select section, status from robot where id = %s"
     result = conn.fetch_one(sql, (id,))
 
@@ -381,7 +428,6 @@ def updateRobot(id, section, status):
         return 0x07
     
     return 0x01
-
         
 def updateProductInfo(product_id, category, price):
     try:
@@ -394,14 +440,14 @@ def updateProductInfo(product_id, category, price):
     
     return 0x02
         
-def fetchProductInfo(name):
-    sql = "select id, category, price from products where name = %s"
-    result = conn.fetch_one(sql, (name,))
+def fetchProductInfo(uid):
+    sql = "select p.id, p.name, p.category, p.price from products p, section s where s.uid = %s and p.id = s.product_id"
+    result = conn.fetch_one(sql, (uid,))
 
     return result
 
 def fetchProductName():
-    sql = "select name from products"
+    sql = "select uid from section"
     result = conn.fetch_all(sql)
 
     return result
@@ -410,8 +456,6 @@ def registAccount(name, id, pw):
     try:
         sql = "select * from user where login_id = %s"
         result = conn.fetch_one(sql, (id,))
-
-        print(result)
 
         if result:
             return 0x02
@@ -444,10 +488,11 @@ def addNewProduct(name, category, price, quantity, uid):
 def orderListQuery(user_id):
     try:
         sql = """
-        select p.name, o.quantity, p.price, g.status, g.date, u.name, o.id
+        select p.name, o.quantity, p.price, g.status, g.date, u.name, o.id, g.id
         from  `order` o, products p, order_group g, user u
         where p.id = o.product_id
         and g.id = o.order_group_id and u.id = o.user_id
+        order by g.id
         """
         if user_id != 1:
             sql += " and u.id = %s"
@@ -474,7 +519,17 @@ def checkoutQuery(cart_id, user_id):
             FROM shopping_cart s
             WHERE s.id = %s
             """
-            conn.execute_query(sql, (group_id, i))
+            row = conn.execute_query(sql, (group_id, i))
+
+            sql = """
+            update products 
+            set quantity = (select (p.quantity - o.quantity) 
+                            from `order` o, products p
+                            where o.product_id = p.id 
+                            and o.id = %s) 
+            where id = (select product_id from `order` where id = %s);
+            """
+            conn.execute_query(sql, (row, row))
 
         sql = "delete from shopping_cart where id in (%s)"
         placeholders = ', '.join(['%s'] * len(cart_id))  # 필요한 Placeholder를 준비
@@ -623,15 +678,20 @@ def robotServerReceive(data):
 
         if status == 0x00:
             group_id = data["group_id"]
+            result = fetchUserID(group_id)
 
             updateOrderStatus(group_id, 2)
-
             try:
-                user_socket = server.client_list[group_id]
+                sendPickupRequest(result[0])
 
-                server.sendData(user_socket, {"command":"PU", "status":0x01})
-            except:
+                writeLog("상품", str(result[0]) + "님 주문번호 " + str(result[1]) + "번  픽업 요청")
+            except Exception as ex:
                 pass
+    elif command == "MV":
+        if data["status"] == 0x03:
+            if not robotThread.isRunning():
+                #robotThread.isRunning = True
+                robotThread.start()
 
     elif command == "LOG":
         status = data["status"]
@@ -641,10 +701,34 @@ def robotServerReceive(data):
 
             writeLog(log_type, message)
 
+def sendPickupRequest(login_id):
+    for socket in server.client_list:
+        if server.client_list[socket] == login_id:
+            if socket.state() == QTcpSocket.ConnectedState:
+                server.sendData(socket, {"command":"PU", "status":0x00})
+                break
+
+def fetchUserID(group_id): 
+    try:
+        sql = """
+        select u.login_id, o.id
+        from order_group g, `order` o, user u 
+        where g.id = %s 
+        and g.user_id = u.id 
+        and g.id = o.order_group_id
+        """
+        result = conn.fetch_one(sql, (group_id,))
+    except Exception as e:
+        print("Error Fetch User ID :", e)
+
+    return result
+
 def updateOrderStatus(group_id, status):
     try:
         sql = "update order_group set status = %s where id = %s"
         conn.execute_query(sql, (status, group_id))
+
+        conn.commit()
     except:
         conn.rollback()
 
@@ -677,14 +761,14 @@ if __name__ == "__main__":
     server = Server()
 
     client = Client()
-    client.connectToHost(QHostAddress("192.168.0.2"), 8888)
+    client.connectToHost(QHostAddress("192.168.0.41"), 8888)
     client.receive_data.connect(robotServerReceive)
 
     conn = database.pickup_database(
-        "addinedu.synology.me",
-        "pickup",
-        "Addinedu5!",
-        "pickup"
+        "",
+        "",
+        "",
+        ""
     )
 
     robotThread = RobotControlThread(conn, client)
