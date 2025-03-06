@@ -37,7 +37,7 @@ mp4 - video
 | worker | 신동철 |  사용자/관리자 GUI, DB 구축, 로봇 및 진열대 설계|    
 | worker | 황한문 |  진열대-서버 통신, github 관리, 서포트|    
 
-## Insructions
+## Instructions
 ### Environment   
 - Dev: Arduino - C/C++, PyQt/Qt 5 Designer - python,  
 - DB: AWS RDS - MySQL
